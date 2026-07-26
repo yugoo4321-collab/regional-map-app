@@ -31,18 +31,58 @@ METRICS = {
 }
 
 PALETTE = [
-    [232, 240, 248, 185],
-    [198, 219, 239, 195],
-    [158, 202, 225, 205],
-    [107, 174, 214, 215],
-    [49, 130, 189, 225],
-    [8, 81, 156, 235],
+    [232, 240, 248, 190],
+    [198, 219, 239, 200],
+    [158, 202, 225, 210],
+    [107, 174, 214, 220],
+    [49, 130, 189, 230],
+    [8, 81, 156, 240],
 ]
 
 st.set_page_config(
     page_title="東京23区 人口・高齢化ダッシュボード",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+        .block-container {
+            max-width: 1320px;
+            padding-top: 2.2rem;
+            padding-bottom: 3.5rem;
+        }
+        h1 {
+            letter-spacing: -0.035em;
+        }
+        [data-testid="stMetric"] {
+            min-height: 132px;
+        }
+        .map-legend {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 0.25rem 0 0.75rem 0;
+            flex-wrap: wrap;
+        }
+        .map-legend-item {
+            width: 92px;
+            font-size: 0.76rem;
+            color: #5f6368;
+        }
+        .map-legend-swatch {
+            height: 10px;
+            border-radius: 3px;
+            margin-bottom: 4px;
+        }
+        .small-note {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -81,7 +121,7 @@ def iter_points(value):
 def geometry_center(feature: dict) -> tuple[float, float]:
     points = list(iter_points(feature["geometry"]["coordinates"]))
     if not points:
-        return 139.70, 35.69
+        return 139.74, 35.69
 
     longitudes = [point[0] for point in points]
     latitudes = [point[1] for point in points]
@@ -170,7 +210,7 @@ def prepare_map_geojson(
                 "高齢化率表示": f"{row['高齢化率']:.2f}%",
                 "人口密度表示": f"{row['人口密度']:,.0f}人/km²",
                 "fill_color": color_for_value(value, minimum, maximum),
-                "line_color": [26, 26, 26, 255] if is_selected else [255, 255, 255, 220],
+                "line_color": [17, 24, 39, 255] if is_selected else [255, 255, 255, 225],
                 "line_width": 4 if is_selected else 1,
             }
         )
@@ -180,18 +220,50 @@ def prepare_map_geojson(
 
 def selected_view_state(geojson: dict, ward: str) -> pdk.ViewState:
     if ward == "23区全体":
-        return pdk.ViewState(latitude=35.69, longitude=139.70, zoom=9.35)
+        return pdk.ViewState(latitude=35.69, longitude=139.745, zoom=10.55)
 
     for feature in geojson["features"]:
         if feature.get("properties", {}).get("自治体") == ward:
             longitude, latitude = geometry_center(feature)
-            return pdk.ViewState(
-                latitude=latitude,
-                longitude=longitude,
-                zoom=10.6,
-            )
+            return pdk.ViewState(latitude=latitude, longitude=longitude, zoom=11.85)
 
-    return pdk.ViewState(latitude=35.69, longitude=139.70, zoom=9.35)
+    return pdk.ViewState(latitude=35.69, longitude=139.745, zoom=10.55)
+
+
+def legend_html(metric: str, minimum: float, maximum: float) -> str:
+    values = [minimum + (maximum - minimum) * index / (len(PALETTE) - 1) for index in range(len(PALETTE))]
+    items = []
+
+    for color, value in zip(PALETTE, values):
+        red, green, blue, _ = color
+        items.append(
+            "<div class='map-legend-item'>"
+            f"<div class='map-legend-swatch' style='background: rgb({red}, {green}, {blue});'></div>"
+            f"<div>{format_value(metric, value)}</div>"
+            "</div>"
+        )
+
+    return "<div class='map-legend'>" + "".join(items) + "</div>"
+
+
+def comparison_sentence(data: pd.DataFrame, ward: str, metric: str) -> str:
+    column = METRICS[metric]["column"]
+    value = float(data.loc[data["自治体"] == ward, column].iloc[0])
+    median = float(data[column].median())
+    difference = value - median
+    direction = "上" if difference > 0 else "下" if difference < 0 else "同じ"
+
+    if metric == "高齢化率":
+        difference_text = f"{abs(difference):.2f}ポイント"
+    elif metric == "人口":
+        difference_text = f"{abs(difference):,.0f}人"
+    else:
+        difference_text = f"{abs(difference):,.0f}人/km²"
+
+    if direction == "同じ":
+        return f"{ward}は23区中央値と同じ水準です。"
+
+    return f"{ward}は23区中央値より{difference_text}{direction}です。"
 
 
 try:
@@ -207,42 +279,46 @@ st.caption(
     "23区の人口構造を地図とグラフで比較します。"
 )
 
-st.sidebar.header("表示条件")
-selected_metric = st.sidebar.radio(
-    "地図で見る指標",
-    list(METRICS),
-    horizontal=False,
-)
-selected_ward = st.sidebar.selectbox(
-    "注目する区",
-    ["23区全体"] + data["自治体"].tolist(),
-)
+control_left, control_right = st.columns([1.15, 0.85])
+with control_left:
+    selected_metric = st.radio(
+        "地図・ランキングで見る指標",
+        list(METRICS),
+        horizontal=True,
+    )
+with control_right:
+    selected_ward = st.selectbox(
+        "注目する区",
+        ["23区全体"] + data["自治体"].tolist(),
+    )
 
 metric_column = METRICS[selected_metric]["column"]
 ranked = data.sort_values(metric_column, ascending=False).reset_index(drop=True)
 ranked["順位"] = ranked.index + 1
 
-if selected_ward == "23区全体":
-    total_population = int(data["人口"].sum())
-    weighted_aging_rate = float(
-        (data["人口"] * data["高齢化率"]).sum() / total_population
-    )
-    highest_aging = data.loc[data["高齢化率"].idxmax()]
-    highest_density = data.loc[data["人口密度"].idxmax()]
+total_population = int(data["人口"].sum())
+weighted_aging_rate = float(
+    (data["人口"] * data["高齢化率"]).sum() / total_population
+)
+highest_aging = data.loc[data["高齢化率"].idxmax()]
+highest_density = data.loc[data["人口密度"].idxmax()]
 
+if selected_ward == "23区全体":
     columns = st.columns(4)
     columns[0].metric("人口合計", f"{total_population:,}人", border=True)
     columns[1].metric("高齢化率（人口加重）", f"{weighted_aging_rate:.2f}%", border=True)
     columns[2].metric(
         "高齢化率が最も高い区",
         highest_aging["自治体"],
-        f"{highest_aging['高齢化率']:.2f}%",
+        delta=f"{highest_aging['高齢化率']:.2f}%",
+        delta_color="off",
         border=True,
     )
     columns[3].metric(
         "人口密度が最も高い区",
         highest_density["自治体"],
-        f"{highest_density['人口密度']:,.0f}人/km²",
+        delta=f"{highest_density['人口密度']:,.0f}人/km²",
+        delta_color="off",
         border=True,
     )
 else:
@@ -252,30 +328,43 @@ else:
     columns = st.columns(4)
     columns[0].metric("人口", f"{selected_row['人口']:,.0f}人", border=True)
     columns[1].metric("高齢化率", f"{selected_row['高齢化率']:.2f}%", border=True)
-    columns[2].metric(
-        "人口密度",
-        f"{selected_row['人口密度']:,.0f}人/km²",
-        border=True,
-    )
+    columns[2].metric("人口密度", f"{selected_row['人口密度']:,.0f}人/km²", border=True)
     columns[3].metric(
         f"{METRICS[selected_metric]['label']}の順位",
         f"23区中 {rank}位",
         border=True,
     )
+    st.caption(comparison_sentence(data, selected_ward, selected_metric))
 
-map_geojson = prepare_map_geojson(
-    raw_geojson,
-    data,
-    selected_metric,
-    selected_ward,
-)
+map_geojson = prepare_map_geojson(raw_geojson, data, selected_metric, selected_ward)
 view_state = selected_view_state(map_geojson, selected_ward)
+
+aging_top3 = data.nlargest(3, "高齢化率")["自治体"].tolist()
+aging_bottom3 = data.nsmallest(3, "高齢化率")["自治体"].tolist()
+density_aging_corr = float(data["人口密度"].corr(data["高齢化率"]))
+
+with st.expander("データから読み取れる傾向"):
+    st.write(
+        f"高齢化率が高い3区は、{'・'.join(aging_top3)}です。"
+        f"低い3区は、{'・'.join(aging_bottom3)}です。"
+    )
+    st.write(
+        f"人口密度と高齢化率の相関係数は {density_aging_corr:.2f} です。"
+        "相関は因果関係を示すものではないため、背景要因は別途確認する必要があります。"
+    )
 
 map_tab, comparison_tab, data_tab = st.tabs(["地図", "比較", "データ"])
 
 with map_tab:
     st.subheader(f"{METRICS[selected_metric]['label']}の分布")
-    st.caption("区をクリックすると詳細を確認できます。色が濃いほど値が高くなります。")
+    st.caption(
+        "区にカーソルを合わせると詳細を確認できます。"
+        "注目する区は上の選択欄から変更できます。"
+    )
+
+    minimum = float(data[metric_column].min())
+    maximum = float(data[metric_column].max())
+    st.markdown(legend_html(selected_metric, minimum, maximum), unsafe_allow_html=True)
 
     layer = pdk.Layer(
         "GeoJsonLayer",
@@ -307,18 +396,19 @@ with map_tab:
         },
     )
 
-    st.pydeck_chart(deck, width="stretch", height=590)
+    st.pydeck_chart(deck, width="stretch", height=560)
     st.caption(
         "統計値は2026年版、行政境界は2023年1月1日時点です。"
-        "境界は地理的な比較のために使用しています。"
+        "境界データは地理的な比較にのみ使用しています。"
     )
 
 with comparison_tab:
-    left, right = st.columns([1.05, 0.95])
+    left, right = st.columns([1.03, 0.97])
 
     with left:
         st.subheader(f"{METRICS[selected_metric]['label']}ランキング")
         chart_data = data.sort_values(metric_column, ascending=False)
+        median_value = float(data[metric_column].median())
 
         bars = (
             alt.Chart(chart_data)
@@ -343,13 +433,20 @@ with comparison_tab:
             )
             .properties(height=620)
         )
-        st.altair_chart(bars, width="stretch")
+
+        median_rule = (
+            alt.Chart(pd.DataFrame({"中央値": [median_value]}))
+            .mark_rule(color="#6B7280", strokeDash=[5, 4])
+            .encode(x=alt.X("中央値:Q"))
+        )
+        st.altair_chart(bars + median_rule, width="stretch")
+        st.caption("破線は23区の中央値です。")
 
     with right:
         st.subheader("人口密度と高齢化率")
         scatter = (
             alt.Chart(data)
-            .mark_circle(opacity=0.82, stroke="white", strokeWidth=1)
+            .mark_circle(opacity=0.84, stroke="white", strokeWidth=1)
             .encode(
                 x=alt.X("人口密度:Q", title="人口密度（人/km²）"),
                 y=alt.Y("高齢化率:Q", title="高齢化率（%）", scale=alt.Scale(zero=False)),
@@ -371,7 +468,7 @@ with comparison_tab:
         )
         st.altair_chart(scatter, width="stretch")
         st.caption(
-            "円の大きさは人口を示します。人口密度と高齢化率の位置関係を、"
+            "円の大きさは人口を示します。人口密度と高齢化率の関係を、"
             "区ごとに確認できます。"
         )
 
@@ -380,20 +477,20 @@ with data_tab:
 
     table_data = data[
         ["自治体", "面積_km2", "人口", "高齢化率", "人口密度"]
-    ].sort_values(metric_column, ascending=False)
+    ].sort_values(metric_column, ascending=False).copy()
+    table_data.insert(0, "順位", range(1, len(table_data) + 1))
 
     st.dataframe(
         table_data,
         hide_index=True,
         width="stretch",
         column_config={
+            "順位": st.column_config.NumberColumn("順位", format="%d"),
             "自治体": st.column_config.TextColumn("区"),
             "面積_km2": st.column_config.NumberColumn("面積", format="%.2f km²"),
             "人口": st.column_config.NumberColumn("人口", format="localized"),
             "高齢化率": st.column_config.NumberColumn("高齢化率", format="%.2f%%"),
-            "人口密度": st.column_config.NumberColumn(
-                "人口密度", format="localized"
-            ),
+            "人口密度": st.column_config.NumberColumn("人口密度", format="localized"),
         },
     )
 
