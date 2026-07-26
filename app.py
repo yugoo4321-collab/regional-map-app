@@ -3,114 +3,137 @@ import streamlit as st
 
 
 st.set_page_config(
-    page_title="地域課題可視化ダッシュボード",
-    page_icon=None,
+    page_title="東京23区 人口・高齢化率",
     layout="wide",
 )
 
-st.title("地域課題可視化ダッシュボード")
+
+@st.cache_data
+def load_data():
+    return pd.read_csv("data/tokyo_wards.csv")
+
+
+data = load_data()
+
+total_population = data["人口"].sum()
+
+weighted_aging_rate = (
+    (data["人口"] * data["高齢化率"]).sum()
+    / total_population
+)
+
+highest_aging = data.loc[data["高齢化率"].idxmax()]
+largest_population = data.loc[data["人口"].idxmax()]
+
+
+st.title("東京23区 人口・高齢化率ダッシュボード")
+
 st.write(
-    "自治体ごとの人口、高齢化率、空き家率をまとめ、"
-    "地域が抱える課題を比較するための試作版です。"
+    "東京都の公開統計をもとに、"
+    "23区の人口と65歳以上人口割合を比較します。"
 )
 
-st.info(
-    "現在の数値は画面と計算処理を確認するための仮データです。"
-    "最終版では政府統計などの公開データに差し替えます。"
+st.caption(
+    "使用データ：東京都「区市町村統計表（2026年）」"
 )
 
-data = pd.read_csv("data/regions.csv")
 
-aging_min = data["高齢化率"].min()
-aging_max = data["高齢化率"].max()
-vacant_min = data["空き家率"].min()
-vacant_max = data["空き家率"].max()
-
-data["高齢化スコア"] = (
-    (data["高齢化率"] - aging_min) / (aging_max - aging_min) * 100
-)
-
-data["空き家スコア"] = (
-    (data["空き家率"] - vacant_min) / (vacant_max - vacant_min) * 100
-)
-
-data["地域課題スコア"] = (
-    data["高齢化スコア"] * 0.6
-    + data["空き家スコア"] * 0.4
-).round(1)
-
-prefectures = ["すべて"] + sorted(data["都道府県"].unique().tolist())
-
-selected_prefecture = st.sidebar.selectbox(
-    "都道府県",
-    prefectures,
-)
-
-if selected_prefecture == "すべて":
-    filtered_data = data.copy()
-else:
-    filtered_data = data[data["都道府県"] == selected_prefecture].copy()
-
-st.sidebar.caption(
-    "表示する都道府県を選択すると、地図と一覧が切り替わります。"
-)
-
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 col1.metric(
-    "表示自治体数",
-    f"{len(filtered_data)}自治体",
+    "対象自治体",
+    "23区",
 )
 
 col2.metric(
-    "平均高齢化率",
-    f"{filtered_data['高齢化率'].mean():.1f}%",
+    "人口合計",
+    f"{total_population:,}人",
 )
 
 col3.metric(
-    "平均空き家率",
-    f"{filtered_data['空き家率'].mean():.1f}%",
+    "高齢化率",
+    f"{weighted_aging_rate:.1f}%",
 )
 
-st.subheader("自治体の位置")
-
-map_data = filtered_data.rename(
-    columns={
-        "緯度": "lat",
-        "経度": "lon",
-    }
+col4.metric(
+    "高齢化率が最も高い区",
+    highest_aging["自治体"],
+    f"{highest_aging['高齢化率']:.2f}%",
 )
 
-st.map(map_data[["lat", "lon"]])
 
-st.subheader("地域課題の比較")
+st.divider()
 
-display_data = filtered_data[
-    [
-        "都道府県",
-        "自治体",
-        "人口",
-        "高齢化率",
-        "空き家率",
-        "地域課題スコア",
-    ]
-].sort_values(
-    "地域課題スコア",
-    ascending=False,
+tab1, tab2 = st.tabs(
+    ["高齢化率", "人口"]
+)
+
+
+with tab1:
+    st.subheader("区別の高齢化率")
+
+    aging_chart = (
+        data[["自治体", "高齢化率"]]
+        .sort_values("高齢化率", ascending=False)
+        .set_index("自治体")
+    )
+
+    st.bar_chart(
+        aging_chart,
+        height=500,
+    )
+
+
+with tab2:
+    st.subheader("区別の人口")
+
+    population_chart = (
+        data[["自治体", "人口"]]
+        .sort_values("人口", ascending=False)
+        .set_index("自治体")
+    )
+
+    st.bar_chart(
+        population_chart,
+        height=500,
+    )
+
+
+st.subheader("23区の一覧")
+
+sort_column = st.selectbox(
+    "並び替え",
+    ["高齢化率", "人口", "自治体"],
+)
+
+ascending = sort_column == "自治体"
+
+display_data = data.sort_values(
+    sort_column,
+    ascending=ascending,
+).copy()
+
+display_data["人口"] = display_data["人口"].map(
+    lambda value: f"{value:,}"
+)
+
+display_data["高齢化率"] = display_data["高齢化率"].map(
+    lambda value: f"{value:.2f}%"
 )
 
 st.dataframe(
     display_data,
-    width="stretch",
     hide_index=True,
+    width="stretch",
 )
 
-with st.expander("地域課題スコアの計算方法"):
+
+with st.expander("データについて"):
     st.write(
-        "各指標を0点から100点にそろえたうえで、"
-        "高齢化率を60%、空き家率を40%として合計しています。"
+        "人口と65歳以上人口割合は、東京都が公開している"
+        "区市町村別統計から取得しています。"
     )
     st.write(
-        "この配分は試作段階の設定です。"
-        "今後、先行研究や行政資料を確認しながら根拠を整えます。"
+        "現段階では、根拠のない独自スコアは使用せず、"
+        "公表値をそのまま比較しています。"
     )
