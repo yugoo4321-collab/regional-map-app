@@ -24,6 +24,13 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 ![人口密度と高齢化率の構造分析](assets/structure-analysis.png)
 <!-- SHOWCASE_END -->
 
+## ビジュアル・体験設計
+
+- ダークネイビーのヒーローと抽象都市ネットワークで、作品の世界観を提示
+- 「俯瞰・比較・構造・変化」の4段階を探索導線として可視化
+- KPI、プロフィール、タブ、グラフ、表の余白と質感を統一
+- モバイル表示と`prefers-reduced-motion`に対応
+
 ## この作品でできること
 
 - 高齢化率・人口・人口密度を切り替えられるコロプレス地図
