@@ -8,6 +8,22 @@
 
 https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
+<!-- SHOWCASE_START -->
+## 画面イメージ
+
+### 全体像
+
+地図・指標切替・KPI・自動インサイトを一つの画面にまとめ、23区全体の傾向から個別区の特徴へ自然に移れる構成にしています。
+
+![東京23区 都市構造ダッシュボードの全体画面](assets/dashboard-overview.png)
+
+### 構造分析
+
+人口密度と高齢化率を散布図で捉え、中央値を基準に4タイプへ分類しています。相関係数と解釈上の注意も同じ画面で確認できます。
+
+![人口密度と高齢化率の構造分析](assets/structure-analysis.png)
+<!-- SHOWCASE_END -->
+
 ## この作品でできること
 
 - 高齢化率・人口・人口密度を切り替えられるコロプレス地図
@@ -111,6 +127,9 @@ regional-map-app/
 ├── .github/
 │   └── workflows/
 │       └── validate.yml         # 自動品質チェック
+├── assets/
+│   ├── dashboard-overview.png
+│   └── structure-analysis.png
 ├── .streamlit/
 │   └── config.toml
 └── data/
