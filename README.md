@@ -53,6 +53,13 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 画面表示用の数値を手作業で書き換えない構成です。
 
+## 品質管理
+
+- `validate_project.py`で、23区の件数、欠損、重複、値域、人口密度の再計算、GeoJSONとの自治体コード整合、経年データの年次網羅性を検証
+- GitHub Actionsでpush・pull requestごとにデータ検証とPython構文チェックを自動実行
+- データタブ上でも件数・対象年・欠損・重複を確認可能
+- 画面幅640px以下を想定したモバイル向けレイアウト調整
+
 ## 使用データ
 
 ### 現況分析
@@ -100,6 +107,10 @@ regional-map-app/
 ├── prepare_data.py              # 現況データの検証・整形
 ├── prepare_history.py           # 経年CSVの取得・整形
 ├── requirements.txt
+├── validate_project.py          # データ・地理情報の品質検証
+├── .github/
+│   └── workflows/
+│       └── validate.yml         # 自動品質チェック
 ├── .streamlit/
 │   └── config.toml
 └── data/

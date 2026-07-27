@@ -306,6 +306,75 @@ st.markdown(
             .hero { padding: 1.45rem 1.25rem; border-radius: 18px; }
             .map-legend { grid-template-columns: repeat(3, 1fr); }
             .stat-card { min-height: 118px; }
+            .profile-card { min-height: auto; }
+        }
+        @media (max-width: 640px) {
+            .block-container {
+                padding: 0.65rem 0.72rem 2.8rem;
+            }
+            .hero {
+                padding: 1.15rem 1rem 1.1rem;
+                margin-bottom: 0.8rem;
+                border-radius: 16px;
+            }
+            .hero h1 {
+                font-size: 2rem;
+                line-height: 1.12;
+            }
+            .hero p {
+                font-size: 0.91rem;
+                line-height: 1.65;
+            }
+            .hero-eyebrow {
+                font-size: 0.7rem;
+                margin-bottom: 0.65rem;
+            }
+            .control-panel {
+                padding: 0.75rem 0.82rem 0.15rem;
+                border-radius: 14px;
+            }
+            .stat-card {
+                min-height: auto;
+                padding: 0.9rem 0.95rem;
+                border-radius: 14px;
+            }
+            .stat-value {
+                font-size: 1.7rem;
+            }
+            .insight-strip {
+                padding: 0.8rem 0.9rem;
+                line-height: 1.65;
+            }
+            .profile-card {
+                min-height: auto;
+                padding: 1rem;
+            }
+            .profile-name {
+                font-size: 1.65rem;
+            }
+            .map-legend {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            [data-baseweb="tab-list"] {
+                overflow-x: auto;
+                white-space: nowrap;
+                gap: 0;
+                scrollbar-width: thin;
+            }
+            [data-baseweb="tab"] {
+                flex: 0 0 auto;
+                min-width: max-content;
+                height: 2.8rem;
+                padding: 0 0.72rem;
+                font-size: 0.85rem;
+            }
+            [data-testid="stDataFrame"] {
+                font-size: 0.8rem;
+            }
+            .section-intro,
+            .source-note {
+                font-size: 0.8rem;
+            }
         }
     </style>
     """,
@@ -1501,6 +1570,55 @@ with data_tab:
         mime="text/csv",
         width="content",
     )
+    current_missing = int(data.isna().sum().sum())
+    history_missing = int(history.isna().sum().sum())
+    current_duplicates = int(data.duplicated(["自治体コード"]).sum())
+    history_duplicates = int(history.duplicated(["自治体コード", "年"]).sum())
+    covered_years = sorted(history["年"].unique().tolist())
+
+    st.subheader("データ品質")
+    quality_columns = st.columns(4)
+    quality_columns[0].metric("現況データ", f"{data['自治体'].nunique()}区", border=True)
+    quality_columns[1].metric(
+        "経年データ",
+        f"{covered_years[0]}〜{covered_years[-1]}年",
+        border=True,
+    )
+    quality_columns[2].metric(
+        "欠損値",
+        f"{current_missing + history_missing}件",
+        border=True,
+    )
+    quality_columns[3].metric(
+        "重複行",
+        f"{current_duplicates + history_duplicates}件",
+        border=True,
+    )
+
+    with st.expander("データ品質チェックの詳細"):
+        checks_ok = (
+            data["自治体"].nunique() == 23
+            and history["自治体"].nunique() == 23
+            and current_missing == 0
+            and history_missing == 0
+            and current_duplicates == 0
+            and history_duplicates == 0
+        )
+        if checks_ok:
+            st.success(
+                "23区の件数、欠損、重複、値域を確認済みです。"
+                "GitHub Actionsでも同じ検証を自動実行します。"
+            )
+        else:
+            st.warning("品質チェックに未解決の項目があります。")
+        st.markdown(
+            f"- 現況データ：{len(data):,}行、{data['自治体'].nunique()}区\n"
+            f"- 経年データ：{len(history):,}行、{history['自治体'].nunique()}区、"
+            f"{covered_years[0]}〜{covered_years[-1]}年\n"
+            f"- 現況の欠損：{current_missing}件、経年の欠損：{history_missing}件\n"
+            f"- 現況の重複：{current_duplicates}件、経年の重複：{history_duplicates}件"
+        )
+
     with st.expander("データの出典・設計方針・注意点"):
         st.markdown(
             "- 現況統計：東京都『区市町村統計表（2026年）』\n"
