@@ -12,6 +12,7 @@ import streamlit as st
 
 DATA_PATH = Path("data/tokyo_wards.csv")
 GEOJSON_PATH = Path("data/tokyo_wards.geojson")
+HISTORY_PATH = Path("data/tokyo_wards_history.csv")
 LIVE_APP_URL = "https://teeqy5f9waeoacgwccu4yc.streamlit.app"
 
 METRICS = {
@@ -415,6 +416,34 @@ def load_geojson() -> dict:
     return geojson
 
 
+@st.cache_data
+def load_history() -> pd.DataFrame:
+    if not HISTORY_PATH.exists():
+        raise FileNotFoundError(
+            f"{HISTORY_PATH} が見つかりません。prepare_history.pyを実行してください"
+        )
+    history = pd.read_csv(HISTORY_PATH, dtype={"自治体コード": str})
+    required_columns = {"自治体コード", "自治体", "年", "人口", "高齢化率"}
+    missing_columns = required_columns - set(history.columns)
+    if missing_columns:
+        raise ValueError(f"経年CSVに必要な列がありません: {sorted(missing_columns)}")
+    history["自治体コード"] = history["自治体コード"].str.zfill(5)
+    for column in ["年", "人口", "高齢化率"]:
+        history[column] = pd.to_numeric(history[column], errors="raise")
+    history["年"] = history["年"].astype(int)
+    if history["自治体"].nunique() != 23:
+        raise ValueError(
+            f"経年データの自治体数が23区ではなく{history['自治体'].nunique()}区です"
+        )
+    if history.duplicated(["自治体コード", "年"]).any():
+        raise ValueError("経年データに自治体・年の重複があります")
+    if (history["人口"] <= 0).any():
+        raise ValueError("経年データの人口に0以下の値があります")
+    if not history["高齢化率"].between(0, 100).all():
+        raise ValueError("経年データの高齢化率が0〜100の範囲外です")
+    return history.sort_values(["年", "自治体コード"]).reset_index(drop=True)
+
+
 def add_derived_columns(data: pd.DataFrame) -> pd.DataFrame:
     enriched = data.copy()
     for metric_name, config in METRICS.items():
@@ -782,9 +811,260 @@ def make_comparison_index_chart(
     return bars + rule
 
 
+
+def calculate_period_changes(
+    history: pd.DataFrame, start_year: int, end_year: int
+) -> pd.DataFrame:
+    start = history.loc[history["年"] == start_year, [
+        "自治体コード", "自治体", "人口", "高齢化率"
+    ]].rename(
+        columns={
+            "人口": "開始人口",
+            "高齢化率": "開始高齢化率",
+        }
+    )
+    end = history.loc[history["年"] == end_year, [
+        "自治体コード", "自治体", "人口", "高齢化率"
+    ]].rename(
+        columns={
+            "自治体": "終了自治体",
+            "人口": "終了人口",
+            "高齢化率": "終了高齢化率",
+        }
+    )
+    changes = start.merge(end, on="自治体コード", validate="one_to_one")
+    if len(changes) != 23:
+        raise ValueError(
+            f"{start_year}年と{end_year}年を比較できる自治体が{len(changes)}区です"
+        )
+    changes["人口増減"] = changes["終了人口"] - changes["開始人口"]
+    changes["人口増減率"] = changes["人口増減"] / changes["開始人口"] * 100
+    changes["高齢化率変化"] = changes["終了高齢化率"] - changes["開始高齢化率"]
+    return changes.drop(columns="終了自治体")
+
+
+def period_summary(
+    history: pd.DataFrame, start_year: int, end_year: int
+) -> dict[str, float]:
+    start = history.loc[history["年"] == start_year]
+    end = history.loc[history["年"] == end_year]
+    start_population = float(start["人口"].sum())
+    end_population = float(end["人口"].sum())
+    start_aging = float(
+        (start["人口"] * start["高齢化率"]).sum() / start_population
+    )
+    end_aging = float(
+        (end["人口"] * end["高齢化率"]).sum() / end_population
+    )
+    return {
+        "開始人口": start_population,
+        "終了人口": end_population,
+        "人口増減": end_population - start_population,
+        "人口増減率": (end_population - start_population) / start_population * 100,
+        "開始高齢化率": start_aging,
+        "終了高齢化率": end_aging,
+        "高齢化率変化": end_aging - start_aging,
+    }
+
+
+def change_color(value: float, maximum_absolute: float) -> list[int]:
+    if maximum_absolute == 0 or abs(value) < 1e-12:
+        return [226, 232, 240, 220]
+    ratio = min(abs(value) / maximum_absolute, 1.0)
+    if value < 0:
+        start = (219, 234, 254)
+        end = (29, 78, 216)
+    else:
+        start = (255, 237, 213)
+        end = (194, 65, 12)
+    return [
+        int(start[index] + (end[index] - start[index]) * ratio)
+        for index in range(3)
+    ] + [230]
+
+
+def prepare_change_geojson(
+    source_geojson: dict,
+    changes: pd.DataFrame,
+    change_metric: str,
+    selected_ward: str,
+) -> dict:
+    values = changes.set_index("自治体コード").to_dict("index")
+    maximum_absolute = float(changes[change_metric].abs().max())
+    prepared = copy.deepcopy(source_geojson)
+    for feature in prepared["features"]:
+        properties = feature.setdefault("properties", {})
+        code = str(properties.get("N03_007", "")).zfill(5)
+        row = values.get(code)
+        if row is None:
+            properties["fill_color"] = [210, 210, 210, 120]
+            properties["line_color"] = [120, 120, 120, 180]
+            properties["line_width"] = 1
+            continue
+        value = float(row[change_metric])
+        is_selected = selected_ward == row["自治体"]
+        if change_metric == "人口増減率":
+            display_value = f"{value:+.2f}%"
+            metric_label = "人口増減率"
+        else:
+            display_value = f"{value:+.2f}pt"
+            metric_label = "高齢化率変化"
+        properties.update(
+            {
+                "自治体": row["自治体"],
+                "変化指標": metric_label,
+                "変化表示": display_value,
+                "開始人口表示": f"{row['開始人口']:,.0f}人",
+                "終了人口表示": f"{row['終了人口']:,.0f}人",
+                "開始高齢化率表示": f"{row['開始高齢化率']:.2f}%",
+                "終了高齢化率表示": f"{row['終了高齢化率']:.2f}%",
+                "fill_color": change_color(value, maximum_absolute),
+                "line_color": [15, 23, 42, 255] if is_selected else [255, 255, 255, 220],
+                "line_width": 4 if is_selected else 1.2,
+            }
+        )
+    return prepared
+
+
+def make_change_map(
+    source_geojson: dict,
+    changes: pd.DataFrame,
+    change_metric: str,
+    selected_ward: str,
+) -> pdk.Deck:
+    prepared = prepare_change_geojson(
+        source_geojson, changes, change_metric, selected_ward
+    )
+    layer = pdk.Layer(
+        "GeoJsonLayer",
+        data=prepared,
+        pickable=True,
+        stroked=True,
+        filled=True,
+        get_fill_color="properties.fill_color",
+        get_line_color="properties.line_color",
+        get_line_width="properties.line_width",
+        line_width_units="pixels",
+        auto_highlight=True,
+    )
+    tooltip = {
+        "html": (
+            "<b>{自治体}</b><br/>"
+            "{変化指標}: <b>{変化表示}</b><br/>"
+            "人口: {開始人口表示} → {終了人口表示}<br/>"
+            "高齢化率: {開始高齢化率表示} → {終了高齢化率表示}"
+        ),
+        "style": {
+            "backgroundColor": "#0f172a",
+            "color": "white",
+            "fontSize": "13px",
+        },
+    }
+    return pdk.Deck(
+        layers=[layer],
+        initial_view_state=selected_view_state(prepared, selected_ward),
+        map_style="light",
+        tooltip=tooltip,
+    )
+
+
+def change_legend_html(changes: pd.DataFrame, change_metric: str) -> str:
+    maximum_absolute = float(changes[change_metric].abs().max())
+    if change_metric == "人口増減率":
+        formatter = lambda value: f"{value:+.1f}%"
+    else:
+        formatter = lambda value: f"{value:+.1f}pt"
+    values = [
+        -maximum_absolute,
+        -maximum_absolute / 2,
+        0.0,
+        maximum_absolute / 2,
+        maximum_absolute,
+    ]
+    blocks = []
+    for value in values:
+        color = change_color(value, maximum_absolute)
+        blocks.append(
+            '<div class="map-legend-item">'
+            f'<div class="map-legend-swatch" style="background:rgba({color[0]},{color[1]},{color[2]},{color[3] / 255:.2f})"></div>'
+            f'{escape(formatter(value))}</div>'
+        )
+    return '<div class="map-legend" style="grid-template-columns:repeat(5,minmax(74px,1fr))">' + "".join(blocks) + "</div>"
+
+
+def make_history_line_chart(
+    history: pd.DataFrame,
+    wards: list[str],
+    value_column: str,
+    title: str,
+    axis_title: str,
+) -> alt.Chart:
+    selected = history.loc[history["自治体"].isin(wards)].copy()
+    base = alt.Chart(selected).encode(
+        x=alt.X("年:O", title="年", axis=alt.Axis(labelAngle=0)),
+        color=alt.Color("自治体:N", title=None),
+        tooltip=[
+            alt.Tooltip("自治体:N"),
+            alt.Tooltip("年:O"),
+            alt.Tooltip(f"{value_column}:Q", format=",.2f" if value_column == "高齢化率" else ",.0f"),
+        ],
+    )
+    line = base.mark_line(point=True, strokeWidth=2.5).encode(
+        y=alt.Y(f"{value_column}:Q", title=axis_title, scale=alt.Scale(zero=False))
+    )
+    return line.properties(title=title, height=340)
+
+
+def make_change_ranking_chart(
+    changes: pd.DataFrame, change_metric: str, selected_ward: str
+) -> alt.Chart:
+    chart_data = changes.copy()
+    chart_data["選択"] = chart_data["自治体"].eq(selected_ward)
+    chart_data["表示色"] = chart_data[change_metric].map(
+        lambda value: "#C2410C" if value >= 0 else "#1D4ED8"
+    )
+    chart_data.loc[chart_data["選択"], "表示色"] = "#D97706"
+    chart_data = chart_data.sort_values(change_metric)
+    return (
+        alt.Chart(chart_data)
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            x=alt.X(f"{change_metric}:Q", title=change_metric),
+            y=alt.Y("自治体:N", title=None, sort=chart_data["自治体"].tolist()),
+            color=alt.Color(
+                "表示色:N",
+                scale=None,
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("自治体:N"),
+                alt.Tooltip(f"{change_metric}:Q", format="+.2f"),
+            ],
+        )
+        .properties(height=560)
+    )
+
+
+def history_insight(
+    changes: pd.DataFrame, summary: dict[str, float], start_year: int, end_year: int
+) -> str:
+    population_up = changes.loc[changes["人口増減率"].idxmax()]
+    population_down = changes.loc[changes["人口増減率"].idxmin()]
+    aging_up = changes.loc[changes["高齢化率変化"].idxmax()]
+    return (
+        f"<strong>{start_year}→{end_year}年：</strong>"
+        f"23区人口は{summary['人口増減率']:+.2f}%、人口加重の高齢化率は"
+        f"{summary['高齢化率変化']:+.2f}pt変化しました。"
+        f"人口増加率が最大なのは{escape(str(population_up['自治体']))}（{population_up['人口増減率']:+.2f}%）、"
+        f"人口増加率が最小なのは{escape(str(population_down['自治体']))}（{population_down['人口増減率']:+.2f}%）、"
+        f"高齢化率の上昇幅が最大なのは{escape(str(aging_up['自治体']))}（{aging_up['高齢化率変化']:+.2f}pt）です。"
+    )
+
+
 try:
     data = add_derived_columns(load_data())
     raw_geojson = load_geojson()
+    history = load_history()
 except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
     st.error(f"データを読み込めませんでした: {error}")
     st.stop()
@@ -796,7 +1076,7 @@ st.markdown(
         <h1>東京23区 都市構造ダッシュボード</h1>
         <p>
             人口・高齢化率・人口密度を、地図で俯瞰し、2区比較で違いを捉え、
-            散布図で都市構造を読み解きます。東京都の公開統計を、意思決定に使える形へ整理しました。
+            散布図で都市構造を読み解き、経年変化で街の動きを追います。東京都の公開統計を、意思決定に使える形へ整理しました。
         </p>
     </section>
     """,
@@ -857,8 +1137,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-map_tab, compare_tab, analysis_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "データ"]
+map_tab, compare_tab, analysis_tab, history_tab, data_tab = st.tabs(
+    ["地図とプロフィール", "2区比較", "構造分析", "経年変化", "データ"]
 )
 
 with map_tab:
@@ -1019,6 +1299,162 @@ with analysis_tab:
         for _, row in bottom.iterrows():
             st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
 
+
+with history_tab:
+    st.subheader("2015年以降の変化を追う")
+    st.markdown(
+        '<div class="section-intro">毎年1月1日現在の住民基本台帳データを使い、人口と高齢化率の変化を区別に確認します。現況タブとは統計体系が異なるため、絶対値が一致しない場合があります。</div>',
+        unsafe_allow_html=True,
+    )
+    available_years = sorted(history["年"].unique().tolist())
+    start_default = available_years.index(2015) if 2015 in available_years else 0
+    end_default = len(available_years) - 1
+    control_a, control_b, control_c, control_d = st.columns([0.8, 0.8, 1.1, 1.3])
+    with control_a:
+        start_year = st.selectbox(
+            "開始年", available_years[:-1], index=min(start_default, len(available_years) - 2), key="history_start"
+        )
+    end_options = [year for year in available_years if year > start_year]
+    with control_b:
+        end_year = st.selectbox(
+            "終了年", end_options, index=len(end_options) - 1, key="history_end"
+        )
+    with control_c:
+        change_metric = st.radio(
+            "変化地図の指標", ["人口増減率", "高齢化率変化"], horizontal=True
+        )
+    trend_default = selected_ward if selected_ward != "23区全体" else "足立区"
+    with control_d:
+        trend_ward = st.selectbox(
+            "変化を詳しく見る区", data["自治体"].tolist(),
+            index=data["自治体"].tolist().index(trend_default) if trend_default in data["自治体"].tolist() else 0,
+            key="history_ward",
+        )
+
+    changes = calculate_period_changes(history, start_year, end_year)
+    summary = period_summary(history, start_year, end_year)
+    population_growth = changes.loc[changes["人口増減率"].idxmax()]
+    aging_growth = changes.loc[changes["高齢化率変化"].idxmax()]
+
+    history_cards = st.columns(4)
+    with history_cards[0]:
+        stat_card(
+            f"23区人口 {start_year}→{end_year}",
+            f"{summary['人口増減率']:+.2f}%",
+            f"{summary['人口増減']:+,.0f}人",
+        )
+    with history_cards[1]:
+        stat_card(
+            "人口加重の高齢化率",
+            f"{summary['終了高齢化率']:.2f}%",
+            f"{summary['高齢化率変化']:+.2f}pt",
+        )
+    with history_cards[2]:
+        stat_card(
+            "人口増加率が最大",
+            str(population_growth["自治体"]),
+            f"{population_growth['人口増減率']:+.2f}%",
+        )
+    with history_cards[3]:
+        stat_card(
+            "高齢化率の上昇幅が最大",
+            str(aging_growth["自治体"]),
+            f"{aging_growth['高齢化率変化']:+.2f}pt",
+        )
+
+    st.markdown(
+        f'<div class="insight-strip">{history_insight(changes, summary, start_year, end_year)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    change_left, change_right = st.columns([1.45, 0.75], gap="large")
+    with change_left:
+        st.subheader(f"{change_metric}の分布")
+        st.markdown(
+            '<div class="section-intro">青は減少、オレンジは増加を示します。色は良し悪しではなく、変化の方向と大きさだけを表します。</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            change_legend_html(changes, change_metric), unsafe_allow_html=True
+        )
+        st.pydeck_chart(
+            make_change_map(raw_geojson, changes, change_metric, trend_ward),
+            width="stretch",
+            height=570,
+        )
+    with change_right:
+        selected_change = changes.loc[changes["自治体"] == trend_ward].iloc[0]
+        st.markdown(
+            f"""
+            <div class="profile-card" style="min-height:420px">
+                <div class="profile-kicker">Period profile</div>
+                <div class="profile-name">{escape(trend_ward)}</div>
+                <div class="type-badge">{start_year} → {end_year}</div>
+                <div class="profile-summary">人口と高齢化率の変化を同じ期間で確認します。変化の原因は、このデータだけでは特定できません。</div>
+                <div class="profile-row"><span>人口</span><span>{selected_change['開始人口']:,.0f} → {selected_change['終了人口']:,.0f}人</span></div>
+                <div class="profile-row"><span>人口増減</span><span>{selected_change['人口増減']:+,.0f}人</span></div>
+                <div class="profile-row"><span>人口増減率</span><span>{selected_change['人口増減率']:+.2f}%</span></div>
+                <div class="profile-row"><span>高齢化率</span><span>{selected_change['開始高齢化率']:.2f} → {selected_change['終了高齢化率']:.2f}%</span></div>
+                <div class="profile-row"><span>高齢化率変化</span><span>{selected_change['高齢化率変化']:+.2f}pt</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+    trend_wards = st.multiselect(
+        "推移を重ねて見る区（最大4区）",
+        data["自治体"].tolist(),
+        default=list(dict.fromkeys(
+            ward for ward in [trend_ward, "豊島区", "世田谷区"]
+            if ward in data["自治体"].tolist()
+        ))[:3],
+        max_selections=4,
+    )
+    if not trend_wards:
+        trend_wards = [trend_ward]
+    population_chart, aging_chart = st.columns(2, gap="large")
+    with population_chart:
+        st.altair_chart(
+            make_history_line_chart(
+                history, trend_wards, "人口", "人口の推移", "人口（人）"
+            ),
+            width="stretch",
+        )
+    with aging_chart:
+        st.altair_chart(
+            make_history_line_chart(
+                history, trend_wards, "高齢化率", "高齢化率の推移", "高齢化率（%）"
+            ),
+            width="stretch",
+        )
+
+    st.divider()
+    ranking_left, ranking_right = st.columns([1.35, 0.65], gap="large")
+    with ranking_left:
+        st.subheader(f"{change_metric}ランキング")
+        st.altair_chart(
+            make_change_ranking_chart(changes, change_metric, trend_ward),
+            width="stretch",
+        )
+    with ranking_right:
+        st.subheader("変化が大きい区")
+        top_changes = changes.nlargest(5, change_metric)
+        bottom_changes = changes.nsmallest(5, change_metric)
+        st.markdown("**増加側 上位5区**")
+        for _, row in top_changes.iterrows():
+            suffix = "%" if change_metric == "人口増減率" else "pt"
+            st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
+        st.markdown("**減少側 上位5区**")
+        for _, row in bottom_changes.iterrows():
+            suffix = "%" if change_metric == "人口増減率" else "pt"
+            st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
+
+    st.markdown(
+        '<p class="source-note">経年データ：東京都「住民基本台帳による東京都の世帯と人口」の時系列表。各年1月1日現在。人口移動・住宅供給・出生死亡などの要因分析には追加データが必要です。</p>',
+        unsafe_allow_html=True,
+    )
+
 with data_tab:
     st.subheader("23区の統計一覧")
     st.markdown(
@@ -1067,7 +1503,8 @@ with data_tab:
     )
     with st.expander("データの出典・設計方針・注意点"):
         st.markdown(
-            "- 統計：東京都『区市町村統計表（2026年）』\n"
+            "- 現況統計：東京都『区市町村統計表（2026年）』\n"
+            "- 経年統計：東京都『住民基本台帳による東京都の世帯と人口』時系列表（各年1月1日現在）\n"
             "- 行政境界：国土交通省『国土数値情報（行政区域データ）』をもとにNIIが加工した2023年1月1日時点のGeoJSON\n"
             "- 人口密度：人口 ÷ 面積（km²）で算出\n"
             "- 指数：各指標の23区中央値を100として算出。異なる単位の比較補助にのみ使用\n"
@@ -1076,6 +1513,7 @@ with data_tab:
         )
         st.markdown(
             "[東京都 区市町村統計表](https://www.toukei.metro.tokyo.lg.jp/kurasi/2026/ku26-23.htm)  "
+            "／ [住民基本台帳 時系列データ](https://www.toukei.metro.tokyo.lg.jp/juukiy/jy-index.htm)  "
             "／ [行政境界データ](https://geoshape.ex.nii.ac.jp/city/choropleth/13_city.html)"
         )
 
