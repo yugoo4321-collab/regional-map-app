@@ -663,6 +663,216 @@ st.markdown(
             font-weight: 850 !important;
         }
 
+    
+        /* DISCOVERY_MODE_V1 */
+        .discovery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 0.8rem 0 1.15rem;
+        }
+
+        .discovery-card {
+            position: relative;
+            min-height: 150px;
+            overflow: hidden;
+            padding: 1rem 1.05rem;
+            border: 1px solid #D9E5F0;
+            border-radius: 18px;
+            background:
+                radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.1), transparent 42%),
+                linear-gradient(180deg, #FFFFFF 0%, #F8FAFD 100%);
+            box-shadow: 0 10px 28px rgba(11, 23, 40, 0.055);
+        }
+
+        .discovery-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: linear-gradient(180deg, #2563EB, #55D5FF);
+        }
+
+        .discovery-eyebrow {
+            color: #2563EB;
+            font-size: 0.64rem;
+            font-weight: 850;
+            letter-spacing: 0.11em;
+            text-transform: uppercase;
+        }
+
+        .discovery-value {
+            margin-top: 0.52rem;
+            color: #0B1728;
+            font-size: clamp(1.55rem, 2.6vw, 2.2rem);
+            font-weight: 830;
+            line-height: 1.08;
+            letter-spacing: -0.05em;
+        }
+
+        .discovery-label {
+            margin-top: 0.42rem;
+            color: #64748B;
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
+        .story-panel {
+            height: 100%;
+            min-height: 380px;
+            padding: 1.3rem 1.35rem;
+            border: 1px solid rgba(113, 171, 217, 0.22);
+            border-radius: 22px;
+            background:
+                radial-gradient(circle at 92% 8%, rgba(56, 189, 248, 0.17), transparent 30%),
+                linear-gradient(150deg, #071522 0%, #0B2239 62%, #103553 100%);
+            box-shadow: 0 24px 58px rgba(7, 26, 46, 0.16);
+        }
+
+        .story-kicker {
+            color: #7DD3FC;
+            font-size: 0.67rem;
+            font-weight: 850;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .story-title {
+            margin: 0.38rem 0 0.8rem;
+            color: #F8FBFF;
+            font-size: 2.15rem;
+            font-weight: 840;
+            letter-spacing: -0.055em;
+        }
+
+        .story-text {
+            color: #BED0E0;
+            font-size: 0.91rem;
+            line-height: 1.82;
+        }
+
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin-top: 1rem;
+        }
+
+        .signal-item {
+            padding: 0.72rem 0.76rem;
+            border: 1px solid rgba(190, 221, 244, 0.13);
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.045);
+        }
+
+        .signal-item strong {
+            display: block;
+            color: #F5FAFF;
+            font-size: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .signal-item span {
+            display: block;
+            margin-top: 0.2rem;
+            color: #8FA9BF;
+            font-size: 0.67rem;
+        }
+
+        .discovery-explainer {
+            padding: 0.92rem 1rem;
+            margin: 0.75rem 0 1rem;
+            border: 1px solid #D8E4EF;
+            border-radius: 15px;
+            background: #F8FBFF;
+            color: #42566C;
+            font-size: 0.84rem;
+            line-height: 1.7;
+        }
+
+        .discovery-explainer strong {
+            color: #153E75;
+        }
+
+        .similar-list {
+            display: grid;
+            gap: 0.62rem;
+            margin-top: 0.65rem;
+        }
+
+        .similar-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.8rem;
+            align-items: center;
+            padding: 0.85rem 0.9rem;
+            border: 1px solid #DCE5EF;
+            border-radius: 14px;
+            background: #FFFFFF;
+            box-shadow: 0 7px 20px rgba(11, 23, 40, 0.035);
+        }
+
+        .similar-item strong {
+            display: block;
+            color: #0B1728;
+            font-size: 0.94rem;
+        }
+
+        .similar-item span {
+            display: block;
+            margin-top: 0.18rem;
+            color: #6B7B8E;
+            font-size: 0.72rem;
+        }
+
+        .similar-score {
+            min-width: 68px;
+            padding: 0.4rem 0.55rem;
+            border-radius: 999px;
+            background: #EAF2FF;
+            color: #174EA6;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        @media (max-width: 1040px) {
+            .discovery-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .discovery-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+
+            .discovery-card {
+                min-height: 132px;
+                padding: 0.82rem 0.85rem;
+                border-radius: 15px;
+            }
+
+            .discovery-value {
+                font-size: 1.48rem;
+            }
+
+            .story-panel {
+                min-height: auto;
+                padding: 1rem;
+                border-radius: 17px;
+            }
+
+            .story-title {
+                font-size: 1.75rem;
+            }
+
+            .signal-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -1417,6 +1627,257 @@ def history_insight(
     )
 
 
+# DISCOVERY_MODE_V1
+def build_discovery_dataset(
+    data: pd.DataFrame,
+    history: pd.DataFrame,
+) -> pd.DataFrame:
+    start_year = int(history["年"].min())
+    end_year = int(history["年"].max())
+    changes = calculate_period_changes(history, start_year, end_year)[
+        ["自治体コード", "人口増減率", "高齢化率変化"]
+    ]
+    discovery = data.merge(
+        changes,
+        on="自治体コード",
+        how="left",
+        validate="one_to_one",
+    )
+
+    analysis_columns = [
+        "人口",
+        "高齢化率",
+        "人口密度",
+        "人口増減率",
+        "高齢化率変化",
+    ]
+    scaled_columns: list[str] = []
+    for column in analysis_columns:
+        median = float(discovery[column].median())
+        first_quartile = float(discovery[column].quantile(0.25))
+        third_quartile = float(discovery[column].quantile(0.75))
+        spread = third_quartile - first_quartile
+        if abs(spread) < 1e-12:
+            spread = float(discovery[column].std(ddof=0))
+        if abs(spread) < 1e-12:
+            spread = 1.0
+        scaled_name = f"{column}_ロバスト距離"
+        discovery[scaled_name] = (discovery[column] - median) / spread
+        scaled_columns.append(scaled_name)
+
+    discovery["中央値からの総合距離"] = (
+        discovery[scaled_columns].pow(2).mean(axis=1).pow(0.5)
+    )
+    discovery["総合距離順位"] = discovery["中央値からの総合距離"].rank(
+        method="min",
+        ascending=False,
+    ).astype(int)
+    discovery["高密度若年コントラスト"] = (
+        discovery["人口密度_ロバスト距離"]
+        - discovery["高齢化率_ロバスト距離"]
+    )
+    return discovery
+
+
+def discovery_story(
+    row: pd.Series,
+    discovery: pd.DataFrame,
+    start_year: int,
+    end_year: int,
+) -> str:
+    population_growth_median = float(discovery["人口増減率"].median())
+    aging_change_median = float(discovery["高齢化率変化"].median())
+
+    growth_relation = (
+        "23区中央値を上回る"
+        if float(row["人口増減率"]) >= population_growth_median
+        else "23区中央値を下回る"
+    )
+    aging_relation = (
+        "23区中央値より上昇幅が大きい"
+        if float(row["高齢化率変化"]) >= aging_change_median
+        else "23区中央値より上昇幅が小さい"
+    )
+
+    notable_parts: list[str] = []
+    for metric in ["人口", "高齢化率", "人口密度"]:
+        rank = int(row[f"{metric}順位"])
+        if rank <= 3:
+            notable_parts.append(f"{metric}は23区中{rank}位")
+        elif rank >= 21:
+            notable_parts.append(f"{metric}は23区中{rank}位")
+
+    if int(row["総合距離順位"]) <= 5:
+        notable_parts.append(
+            f"5指標を合わせた中央値からの距離は23区中{int(row['総合距離順位'])}位"
+        )
+
+    notable_text = (
+        "、".join(notable_parts) + "です。"
+        if notable_parts
+        else "現在値は複数指標で23区の中間層に位置します。"
+    )
+
+    return (
+        f"{row['自治体']}は「{row['都市タイプ']}型」に分類されます。"
+        f"{start_year}年から{end_year}年の人口増減率は"
+        f"{float(row['人口増減率']):+.2f}%で、{growth_relation}動きです。"
+        f"同期間の高齢化率は{float(row['高齢化率変化']):+.2f}pt変化し、"
+        f"{aging_relation}傾向です。{notable_text}"
+    )
+
+
+# DISCOVERY_SIMILARITY_NUMERIC_FIX_V1
+def find_similar_wards(
+    discovery: pd.DataFrame,
+    ward: str,
+    limit: int = 3,
+) -> pd.DataFrame:
+    distance_columns = [
+        "人口_ロバスト距離",
+        "高齢化率_ロバスト距離",
+        "人口密度_ロバスト距離",
+        "人口増減率_ロバスト距離",
+        "高齢化率変化_ロバスト距離",
+    ]
+
+    target_rows = discovery.loc[discovery["自治体"] == ward]
+    if target_rows.empty:
+        raise ValueError(f"選択した区が見つかりません: {ward}")
+
+    target = target_rows.iloc[0]
+    candidates = discovery.loc[discovery["自治体"] != ward].copy()
+
+    # CSV結合後にobject型へ変わった場合でも、距離計算前に数値へ統一する。
+    candidate_values = candidates[distance_columns].apply(
+        pd.to_numeric,
+        errors="coerce",
+    )
+    target_values = pd.to_numeric(
+        target[distance_columns],
+        errors="coerce",
+    ).astype(float)
+
+    if candidate_values.isna().any().any() or target_values.isna().any():
+        raise ValueError("類似度計算に使用する指標に数値化できない値があります")
+
+    distance = (
+        candidate_values.astype(float)
+        .sub(target_values, axis="columns")
+        .pow(2)
+        .mean(axis=1)
+        .pow(0.5)
+    )
+
+    candidates["距離"] = pd.to_numeric(
+        distance,
+        errors="raise",
+    ).astype(float)
+    candidates["類似度"] = (
+        100.0 / (1.0 + candidates["距離"])
+    ).astype(float)
+
+    return (
+        candidates
+        .sort_values("距離", ascending=True, kind="stable")
+        .head(limit)
+        .copy()
+    )
+
+
+def discovery_profile_chart(row: pd.Series) -> alt.Chart:
+    chart_data = pd.DataFrame(
+        {
+            "指標": [
+                "人口",
+                "高齢化率",
+                "人口密度",
+                "人口増減率",
+                "高齢化率変化",
+            ],
+            "中央値からの距離": [
+                float(row["人口_ロバスト距離"]),
+                float(row["高齢化率_ロバスト距離"]),
+                float(row["人口密度_ロバスト距離"]),
+                float(row["人口増減率_ロバスト距離"]),
+                float(row["高齢化率変化_ロバスト距離"]),
+            ],
+        }
+    )
+    chart_data["方向"] = chart_data["中央値からの距離"].map(
+        lambda value: "中央値より高い" if value >= 0 else "中央値より低い"
+    )
+    bars = (
+        alt.Chart(chart_data)
+        .mark_bar(cornerRadiusEnd=5, height=26)
+        .encode(
+            x=alt.X(
+                "中央値からの距離:Q",
+                title="23区中央値からの距離（四分位範囲で標準化）",
+                scale=alt.Scale(domain=[-3.2, 3.2]),
+            ),
+            y=alt.Y("指標:N", title=None, sort=None),
+            color=alt.Color(
+                "方向:N",
+                scale=alt.Scale(
+                    domain=["中央値より低い", "中央値より高い"],
+                    range=["#D97706", "#2563EB"],
+                ),
+                legend=alt.Legend(title=None, orient="bottom"),
+            ),
+            tooltip=[
+                alt.Tooltip("指標:N"),
+                alt.Tooltip("中央値からの距離:Q", format="+.2f"),
+            ],
+        )
+        .properties(height=310)
+    )
+    zero_rule = (
+        alt.Chart(pd.DataFrame({"基準": [0.0]}))
+        .mark_rule(color="#64748B", strokeDash=[5, 4], strokeWidth=2)
+        .encode(x="基準:Q")
+    )
+    return bars + zero_rule
+
+
+def discovery_distance_chart(
+    discovery: pd.DataFrame,
+    selected_ward: str,
+) -> alt.Chart:
+    chart_data = discovery.nlargest(10, "中央値からの総合距離").copy()
+    if selected_ward not in chart_data["自治体"].tolist():
+        selected_row = discovery.loc[discovery["自治体"] == selected_ward]
+        chart_data = pd.concat([chart_data, selected_row], ignore_index=True)
+    chart_data = chart_data.sort_values("中央値からの総合距離")
+    chart_data["選択"] = chart_data["自治体"].eq(selected_ward)
+
+    return (
+        alt.Chart(chart_data)
+        .mark_bar(cornerRadiusEnd=5, height=20)
+        .encode(
+            x=alt.X(
+                "中央値からの総合距離:Q",
+                title="中央値からの総合距離",
+            ),
+            y=alt.Y(
+                "自治体:N",
+                title=None,
+                sort=chart_data["自治体"].tolist(),
+            ),
+            color=alt.condition(
+                alt.datum.選択,
+                alt.value("#D97706"),
+                alt.value("#2F6FA8"),
+            ),
+            tooltip=[
+                alt.Tooltip("自治体:N"),
+                alt.Tooltip("中央値からの総合距離:Q", format=".2f"),
+                alt.Tooltip("総合距離順位:Q", title="23区順位"),
+            ],
+        )
+        .properties(height=390)
+    )
+
 try:
     data = add_derived_columns(load_data())
     raw_geojson = load_geojson()
@@ -1539,8 +2000,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-map_tab, compare_tab, analysis_tab, history_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "経年変化", "データ"]
+map_tab, compare_tab, analysis_tab, discovery_tab, history_tab, data_tab = st.tabs(
+    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "経年変化", "データ"]
 )
 
 with map_tab:
@@ -1701,6 +2162,205 @@ with analysis_tab:
         for _, row in bottom.iterrows():
             st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
 
+
+with discovery_tab:
+    discovery = build_discovery_dataset(data, history)
+    discovery_start_year = int(history["年"].min())
+    discovery_end_year = int(history["年"].max())
+
+    st.subheader("データから、注目すべき区を発見する")
+    st.markdown(
+        '<div class="section-intro">'
+        '現在値と経年変化を組み合わせ、人口増加、高齢化の変化、都市密度、'
+        '23区中央値からの離れ方を自動で抽出します。ここでの距離や類似度は'
+        '優劣ではなく、特徴を見つけるための探索指標です。'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    fastest_growth = discovery.loc[discovery["人口増減率"].idxmax()]
+    largest_aging_shift = discovery.loc[discovery["高齢化率変化"].idxmax()]
+    highest_density_discovery = discovery.loc[discovery["人口密度"].idxmax()]
+    most_distinctive = discovery.loc[
+        discovery["中央値からの総合距離"].idxmax()
+    ]
+
+    st.markdown(
+        f"""
+        <div class="discovery-grid">
+            <div class="discovery-card">
+                <div class="discovery-eyebrow">Population mover</div>
+                <div class="discovery-value">{escape(str(fastest_growth['自治体']))}</div>
+                <div class="discovery-label">
+                    {discovery_start_year}→{discovery_end_year}年の人口増加率
+                    {float(fastest_growth['人口増減率']):+.2f}%
+                </div>
+            </div>
+            <div class="discovery-card">
+                <div class="discovery-eyebrow">Aging shift</div>
+                <div class="discovery-value">{escape(str(largest_aging_shift['自治体']))}</div>
+                <div class="discovery-label">
+                    高齢化率の変化
+                    {float(largest_aging_shift['高齢化率変化']):+.2f}pt
+                </div>
+            </div>
+            <div class="discovery-card">
+                <div class="discovery-eyebrow">Urban density</div>
+                <div class="discovery-value">{escape(str(highest_density_discovery['自治体']))}</div>
+                <div class="discovery-label">
+                    人口密度 {float(highest_density_discovery['人口密度']):,.0f}人/km²
+                </div>
+            </div>
+            <div class="discovery-card">
+                <div class="discovery-eyebrow">Most distinctive</div>
+                <div class="discovery-value">{escape(str(most_distinctive['自治体']))}</div>
+                <div class="discovery-label">
+                    5指標を合わせた中央値からの距離が最大
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    discovery_wards = discovery["自治体"].tolist()
+    discovery_default = (
+        selected_ward
+        if selected_ward in discovery_wards
+        else str(most_distinctive["自治体"])
+    )
+    discovery_ward = st.selectbox(
+        "深掘りする区",
+        discovery_wards,
+        index=discovery_wards.index(discovery_default),
+        key="discovery_ward",
+    )
+    selected_discovery = discovery.loc[
+        discovery["自治体"] == discovery_ward
+    ].iloc[0]
+
+    story_column, profile_column = st.columns(
+        [0.92, 1.08],
+        gap="large",
+    )
+    with story_column:
+        story = discovery_story(
+            selected_discovery,
+            discovery,
+            discovery_start_year,
+            discovery_end_year,
+        )
+        st.markdown(
+            f"""
+            <div class="story-panel">
+                <div class="story-kicker">Auto-generated urban brief</div>
+                <div class="story-title">{escape(discovery_ward)}</div>
+                <div class="type-badge">{escape(str(selected_discovery['都市タイプ']))}型</div>
+                <div class="story-text">{escape(story)}</div>
+                <div class="signal-grid">
+                    <div class="signal-item">
+                        <strong>{int(selected_discovery['人口順位'])}位</strong>
+                        <span>人口順位</span>
+                    </div>
+                    <div class="signal-item">
+                        <strong>{int(selected_discovery['高齢化率順位'])}位</strong>
+                        <span>高齢化率順位</span>
+                    </div>
+                    <div class="signal-item">
+                        <strong>{float(selected_discovery['人口増減率']):+.2f}%</strong>
+                        <span>人口増減率</span>
+                    </div>
+                    <div class="signal-item">
+                        <strong>{int(selected_discovery['総合距離順位'])}位</strong>
+                        <span>中央値からの距離</span>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with profile_column:
+        st.markdown("#### 23区中央値との違い")
+        st.markdown(
+            '<div class="discovery-explainer">'
+            '<strong>0が23区中央値</strong>です。プラスは中央値より高く、'
+            'マイナスは低いことを示します。単位差をなくすため、'
+            '四分位範囲で標準化しています。'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        st.altair_chart(
+            discovery_profile_chart(selected_discovery),
+            width="stretch",
+        )
+
+    st.divider()
+    similar_column, distance_column = st.columns(
+        [0.72, 1.28],
+        gap="large",
+    )
+    with similar_column:
+        st.subheader("特徴が近い区")
+        st.caption(
+            "現在値と経年変化の5指標を標準化し、距離が近い3区を表示します。"
+        )
+        similar = find_similar_wards(
+            discovery,
+            discovery_ward,
+            limit=3,
+        )
+        # DISCOVERY_HTML_RENDER_FIX_V1
+        similar_blocks: list[str] = []
+        for _, similar_row in similar.iterrows():
+            similar_blocks.append(
+                "".join(
+                    [
+                        '<div class="similar-item">',
+                        "<div>",
+                        f"<strong>{escape(str(similar_row['自治体']))}</strong>",
+                        "<span>",
+                        f"{escape(str(similar_row['都市タイプ']))}型・",
+                        f"人口増減率 {float(similar_row['人口増減率']):+.2f}%",
+                        "</span>",
+                        "</div>",
+                        '<div class="similar-score">',
+                        f"{float(similar_row['類似度']):.0f}",
+                        "</div>",
+                        "</div>",
+                    ]
+                )
+            )
+        similar_html = (
+            '<div class="similar-list">'
+            + "".join(similar_blocks)
+            + "</div>"
+        )
+        st.markdown(
+            similar_html,
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "類似度は確率ではなく、距離を0〜100に変換した探索用の目安です。"
+        )
+
+    with distance_column:
+        st.subheader("中央値から離れた特徴を持つ区")
+        st.markdown(
+            '<div class="section-intro">'
+            '人口・高齢化率・人口密度・人口増減率・高齢化率変化の5指標を'
+            '同じ基準にそろえ、中央値からの総合距離を表示します。'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        st.altair_chart(
+            discovery_distance_chart(discovery, discovery_ward),
+            width="stretch",
+        )
+        st.caption(
+            "値が大きいほど複数指標の組み合わせが23区の中央値から離れています。"
+            "良し悪しや政策評価を表すものではありません。"
+        )
 
 with history_tab:
     st.subheader("2015年以降の変化を追う")
