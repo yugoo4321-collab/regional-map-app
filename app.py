@@ -1378,6 +1378,7 @@ def make_comparison_index_chart(
 
 
 
+@st.cache_data(show_spinner=False)
 def calculate_period_changes(
     history: pd.DataFrame, start_year: int, end_year: int
 ) -> pd.DataFrame:
@@ -1409,6 +1410,7 @@ def calculate_period_changes(
     return changes.drop(columns="終了自治体")
 
 
+@st.cache_data(show_spinner=False)
 def period_summary(
     history: pd.DataFrame, start_year: int, end_year: int
 ) -> dict[str, float]:
@@ -1449,6 +1451,7 @@ def change_color(value: float, maximum_absolute: float) -> list[int]:
     ] + [230]
 
 
+@st.cache_data(show_spinner=False)
 def prepare_change_geojson(
     source_geojson: dict,
     changes: pd.DataFrame,
@@ -1492,45 +1495,90 @@ def prepare_change_geojson(
     return prepared
 
 
-def make_change_map(
+# LIGHTWEIGHT_HISTORY_MAP_ROBUST_V1
+def make_change_map_chart(
     source_geojson: dict,
     changes: pd.DataFrame,
     change_metric: str,
     selected_ward: str,
-) -> pdk.Deck:
+) -> alt.Chart:
+    """経年変化を軽量なVega-Lite地図として描画する。"""
     prepared = prepare_change_geojson(
-        source_geojson, changes, change_metric, selected_ward
+        source_geojson,
+        changes,
+        change_metric,
+        selected_ward,
     )
-    layer = pdk.Layer(
-        "GeoJsonLayer",
-        data=prepared,
-        pickable=True,
-        stroked=True,
-        filled=True,
-        get_fill_color="properties.fill_color",
-        get_line_color="properties.line_color",
-        get_line_width="properties.line_width",
-        line_width_units="pixels",
-        auto_highlight=True,
+
+    features: list[dict] = []
+    selected_features: list[dict] = []
+
+    for source_feature in prepared["features"]:
+        feature = copy.deepcopy(source_feature)
+        properties = feature.setdefault("properties", {})
+        red, green, blue, _ = properties.get(
+            "fill_color",
+            [210, 210, 210, 220],
+        )
+        properties["fill_hex"] = f"#{red:02X}{green:02X}{blue:02X}"
+        features.append(feature)
+
+        if properties.get("自治体") == selected_ward:
+            selected_features.append(copy.deepcopy(feature))
+
+    base = (
+        alt.Chart(alt.Data(values=features))
+        .mark_geoshape(
+            stroke="#FFFFFF",
+            strokeWidth=1.0,
+            opacity=0.98,
+        )
+        .encode(
+            color=alt.Color(
+                "properties.fill_hex:N",
+                scale=None,
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("properties.自治体:N", title="区"),
+                alt.Tooltip("properties.変化指標:N", title="指標"),
+                alt.Tooltip("properties.変化表示:N", title="変化"),
+                alt.Tooltip("properties.開始人口表示:N", title="開始人口"),
+                alt.Tooltip("properties.終了人口表示:N", title="終了人口"),
+                alt.Tooltip(
+                    "properties.開始高齢化率表示:N",
+                    title="開始高齢化率",
+                ),
+                alt.Tooltip(
+                    "properties.終了高齢化率表示:N",
+                    title="終了高齢化率",
+                ),
+            ],
+        )
     )
-    tooltip = {
-        "html": (
-            "<b>{自治体}</b><br/>"
-            "{変化指標}: <b>{変化表示}</b><br/>"
-            "人口: {開始人口表示} → {終了人口表示}<br/>"
-            "高齢化率: {開始高齢化率表示} → {終了高齢化率表示}"
-        ),
-        "style": {
-            "backgroundColor": "#0f172a",
-            "color": "white",
-            "fontSize": "13px",
-        },
-    }
-    return pdk.Deck(
-        layers=[layer],
-        initial_view_state=selected_view_state(prepared, selected_ward),
-        map_style="light",
-        tooltip=tooltip,
+
+    layers: list[alt.Chart] = [base]
+
+    if selected_features:
+        selected_outline = (
+            alt.Chart(alt.Data(values=selected_features))
+            .mark_geoshape(
+                fillOpacity=0,
+                stroke="#0F172A",
+                strokeWidth=3.2,
+            )
+        )
+        layers.append(selected_outline)
+
+    return (
+        alt.layer(*layers)
+        .project(type="mercator")
+        .properties(height=500)
+        .configure_view(
+            stroke="#DCE5EF",
+            strokeWidth=1,
+            fill="#F8FAFC",
+        )
     )
 
 
@@ -1628,6 +1676,7 @@ def history_insight(
 
 
 # DISCOVERY_MODE_V1
+@st.cache_data(show_spinner=False)
 def build_discovery_dataset(
     data: pd.DataFrame,
     history: pd.DataFrame,
@@ -2000,633 +2049,631 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# LAZY_TABS_PERFORMANCE_FIX_V1
 map_tab, compare_tab, analysis_tab, discovery_tab, history_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "経年変化", "データ"]
+    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "経年変化", "データ"],
+    key="main_navigation",
+    on_change="rerun",
 )
 
-with map_tab:
-    left, right = st.columns([1.65, 0.75], gap="large")
-    with left:
-        st.subheader(f"{METRICS[selected_metric]['label']}の分布")
-        st.markdown(
-            '<div class="section-intro">色が濃いほど値が高くなります。区にカーソルを合わせると、複数指標を同時に確認できます。</div>',
-            unsafe_allow_html=True,
-        )
-        minimum = float(data[metric_column].min())
-        maximum = float(data[metric_column].max())
-        st.markdown(legend_html(selected_metric, minimum, maximum), unsafe_allow_html=True)
-        st.pydeck_chart(
-            make_map(raw_geojson, data, selected_metric, selected_ward),
-            width="stretch",
-            height=600,
-        )
-    with right:
-        if selected_ward == "23区全体":
-            representative = data.loc[data[metric_column].idxmax()]
+if map_tab.open:
+    with map_tab:
+        left, right = st.columns([1.65, 0.75], gap="large")
+        with left:
+            st.subheader(f"{METRICS[selected_metric]['label']}の分布")
             st.markdown(
-                f"""
-                <div class="profile-card">
-                    <div class="profile-kicker">Tokyo 23 wards overview</div>
-                    <div class="profile-name">23区全体</div>
-                    <div class="type-badge">選択指標：{escape(METRICS[selected_metric]['short_label'])}</div>
-                    <div class="profile-summary">
-                        地図とランキングは同じ指標に連動します。区を選ぶと、順位・中央値差・都市タイプまで詳細表示に切り替わります。
-                    </div>
-                    <div class="profile-row"><span>選択指標の最大</span><span>{escape(str(representative['自治体']))}</span></div>
-                    <div class="profile-row"><span>最大値</span><span>{escape(format_value(selected_metric, float(representative[metric_column])))}</span></div>
-                    <div class="profile-row"><span>中央値</span><span>{escape(format_value(selected_metric, float(data[metric_column].median())))}</span></div>
-                    <div class="profile-row"><span>最小値</span><span>{escape(format_value(selected_metric, float(data[metric_column].min())))}</span></div>
-                    <div class="profile-row"><span>データ件数</span><span>23区</span></div>
-                </div>
-                """,
+                '<div class="section-intro">色が濃いほど値が高くなります。区にカーソルを合わせると、複数指標を同時に確認できます。</div>',
                 unsafe_allow_html=True,
             )
-        else:
-            selected_row = data.loc[data["自治体"] == selected_ward].iloc[0]
-            st.markdown(
-                profile_html(selected_row, data, selected_metric),
-                unsafe_allow_html=True,
+            minimum = float(data[metric_column].min())
+            maximum = float(data[metric_column].max())
+            st.markdown(legend_html(selected_metric, minimum, maximum), unsafe_allow_html=True)
+            st.pydeck_chart(
+                make_map(raw_geojson, data, selected_metric, selected_ward),
+                width="stretch",
+                height=600,
             )
-    st.markdown(
-        '<p class="source-note">統計値は2026年版、行政境界は2023年1月1日時点です。境界データは地理的比較のために使用しています。</p>',
-        unsafe_allow_html=True,
-    )
-
-with compare_tab:
-    st.subheader("2つの区を、同じ基準で比較する")
-    st.markdown(
-        '<div class="section-intro">絶対値と、23区中央値を100とした指数の両方を表示します。単位の異なる指標を無理に合算しません。</div>',
-        unsafe_allow_html=True,
-    )
-    selector_a, selector_b = st.columns(2)
-    ward_names = data["自治体"].tolist()
-    default_a = ward_names.index("足立区") if "足立区" in ward_names else 0
-    with selector_a:
-        ward_a = st.selectbox("比較する区 A", ward_names, index=default_a, key="ward_a")
-    options_b = [ward for ward in ward_names if ward != ward_a]
-    default_b = options_b.index("豊島区") if "豊島区" in options_b else 0
-    with selector_b:
-        ward_b = st.selectbox("比較する区 B", options_b, index=default_b, key="ward_b")
-    row_a = data.loc[data["自治体"] == ward_a].iloc[0]
-    row_b = data.loc[data["自治体"] == ward_b].iloc[0]
-    st.markdown(
-        f'<div class="comparison-callout">{escape(comparison_text(row_a, row_b))}</div>',
-        unsafe_allow_html=True,
-    )
-    card_a, card_b = st.columns(2, gap="large")
-    with card_a:
-        st.markdown(
-            f"""
-            <div class="panel">
-                <h3 style="margin-top:0">{escape(ward_a)}</h3>
-                <span class="rank-chip">人口 {int(row_a['人口順位'])}位</span>
-                <span class="rank-chip">高齢化率 {int(row_a['高齢化率順位'])}位</span>
-                <span class="rank-chip">人口密度 {int(row_a['人口密度順位'])}位</span>
-                <div class="profile-row"><span>人口</span><span>{row_a['人口']:,.0f}人</span></div>
-                <div class="profile-row"><span>高齢化率</span><span>{row_a['高齢化率']:.2f}%</span></div>
-                <div class="profile-row"><span>人口密度</span><span>{row_a['人口密度']:,.0f}人/km²</span></div>
-                <div class="profile-row"><span>中央値分類</span><span>{escape(str(row_a['都市タイプ']))}型</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with card_b:
-        st.markdown(
-            f"""
-            <div class="panel">
-                <h3 style="margin-top:0">{escape(ward_b)}</h3>
-                <span class="rank-chip">人口 {int(row_b['人口順位'])}位</span>
-                <span class="rank-chip">高齢化率 {int(row_b['高齢化率順位'])}位</span>
-                <span class="rank-chip">人口密度 {int(row_b['人口密度順位'])}位</span>
-                <div class="profile-row"><span>人口</span><span>{row_b['人口']:,.0f}人</span></div>
-                <div class="profile-row"><span>高齢化率</span><span>{row_b['高齢化率']:.2f}%</span></div>
-                <div class="profile-row"><span>人口密度</span><span>{row_b['人口密度']:,.0f}人/km²</span></div>
-                <div class="profile-row"><span>中央値分類</span><span>{escape(str(row_b['都市タイプ']))}型</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.altair_chart(make_comparison_index_chart(row_a, row_b), width="stretch")
-    st.caption("破線の100が23区中央値です。100を上回るほど、中央値より高いことを示します。")
-
-with analysis_tab:
-    st.subheader("人口密度と高齢化率から、23区の構造を読む")
-    st.markdown(
-        '<div class="section-intro">中央値の縦線・横線で4タイプに分けています。分類は発見を補助するための便宜的なもので、政策的な優劣を示しません。</div>',
-        unsafe_allow_html=True,
-    )
-    analysis_left, analysis_right = st.columns([1.35, 0.65], gap="large")
-    with analysis_left:
-        st.altair_chart(make_scatter_chart(data, selected_ward), width="stretch")
-    with analysis_right:
-        corr = float(data["人口密度"].corr(data["高齢化率"]))
-        st.markdown(
-            f"""
-            <div class="panel">
-                <div class="profile-kicker">Relationship</div>
-                <div class="profile-name" style="font-size:1.75rem">r = {corr:.2f}</div>
-                <div class="profile-summary">{escape(correlation_description(corr))}相関は因果関係を示さないため、住宅構成・年齢移動・土地利用などの背景要因は別途検討が必要です。</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        type_counts = data["都市タイプ"].value_counts()
-        for label in QUADRANT_COLORS:
-            count = int(type_counts.get(label, 0))
-            st.markdown(
-                f"""
-                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding:.63rem .2rem">
-                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:{QUADRANT_COLORS[label]};margin-right:8px"></span>{label}型</span>
-                    <strong>{count}区</strong>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    st.divider()
-    rank_left, rank_right = st.columns([1.25, 0.75], gap="large")
-    with rank_left:
-        st.subheader(f"{METRICS[selected_metric]['label']}ランキング")
-        st.altair_chart(
-            make_ranking_chart(data, selected_metric, selected_ward),
-            width="stretch",
-        )
-        st.caption("破線は23区中央値です。注目する区を選ぶとオレンジ色で強調されます。")
-    with rank_right:
-        st.subheader("上位・下位")
-        top = data.nlargest(5, metric_column)[["自治体", metric_column]]
-        bottom = data.nsmallest(5, metric_column)[["自治体", metric_column]]
-        st.markdown("**上位5区**")
-        for _, row in top.iterrows():
-            st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
-        st.markdown("**下位5区**")
-        for _, row in bottom.iterrows():
-            st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
-
-
-with discovery_tab:
-    discovery = build_discovery_dataset(data, history)
-    discovery_start_year = int(history["年"].min())
-    discovery_end_year = int(history["年"].max())
-
-    st.subheader("データから、注目すべき区を発見する")
-    st.markdown(
-        '<div class="section-intro">'
-        '現在値と経年変化を組み合わせ、人口増加、高齢化の変化、都市密度、'
-        '23区中央値からの離れ方を自動で抽出します。ここでの距離や類似度は'
-        '優劣ではなく、特徴を見つけるための探索指標です。'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-
-    fastest_growth = discovery.loc[discovery["人口増減率"].idxmax()]
-    largest_aging_shift = discovery.loc[discovery["高齢化率変化"].idxmax()]
-    highest_density_discovery = discovery.loc[discovery["人口密度"].idxmax()]
-    most_distinctive = discovery.loc[
-        discovery["中央値からの総合距離"].idxmax()
-    ]
-
-    st.markdown(
-        f"""
-        <div class="discovery-grid">
-            <div class="discovery-card">
-                <div class="discovery-eyebrow">Population mover</div>
-                <div class="discovery-value">{escape(str(fastest_growth['自治体']))}</div>
-                <div class="discovery-label">
-                    {discovery_start_year}→{discovery_end_year}年の人口増加率
-                    {float(fastest_growth['人口増減率']):+.2f}%
-                </div>
-            </div>
-            <div class="discovery-card">
-                <div class="discovery-eyebrow">Aging shift</div>
-                <div class="discovery-value">{escape(str(largest_aging_shift['自治体']))}</div>
-                <div class="discovery-label">
-                    高齢化率の変化
-                    {float(largest_aging_shift['高齢化率変化']):+.2f}pt
-                </div>
-            </div>
-            <div class="discovery-card">
-                <div class="discovery-eyebrow">Urban density</div>
-                <div class="discovery-value">{escape(str(highest_density_discovery['自治体']))}</div>
-                <div class="discovery-label">
-                    人口密度 {float(highest_density_discovery['人口密度']):,.0f}人/km²
-                </div>
-            </div>
-            <div class="discovery-card">
-                <div class="discovery-eyebrow">Most distinctive</div>
-                <div class="discovery-value">{escape(str(most_distinctive['自治体']))}</div>
-                <div class="discovery-label">
-                    5指標を合わせた中央値からの距離が最大
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    discovery_wards = discovery["自治体"].tolist()
-    discovery_default = (
-        selected_ward
-        if selected_ward in discovery_wards
-        else str(most_distinctive["自治体"])
-    )
-    discovery_ward = st.selectbox(
-        "深掘りする区",
-        discovery_wards,
-        index=discovery_wards.index(discovery_default),
-        key="discovery_ward",
-    )
-    selected_discovery = discovery.loc[
-        discovery["自治体"] == discovery_ward
-    ].iloc[0]
-
-    story_column, profile_column = st.columns(
-        [0.92, 1.08],
-        gap="large",
-    )
-    with story_column:
-        story = discovery_story(
-            selected_discovery,
-            discovery,
-            discovery_start_year,
-            discovery_end_year,
-        )
-        st.markdown(
-            f"""
-            <div class="story-panel">
-                <div class="story-kicker">Auto-generated urban brief</div>
-                <div class="story-title">{escape(discovery_ward)}</div>
-                <div class="type-badge">{escape(str(selected_discovery['都市タイプ']))}型</div>
-                <div class="story-text">{escape(story)}</div>
-                <div class="signal-grid">
-                    <div class="signal-item">
-                        <strong>{int(selected_discovery['人口順位'])}位</strong>
-                        <span>人口順位</span>
+        with right:
+            if selected_ward == "23区全体":
+                representative = data.loc[data[metric_column].idxmax()]
+                st.markdown(
+                    f"""
+                    <div class="profile-card">
+                        <div class="profile-kicker">Tokyo 23 wards overview</div>
+                        <div class="profile-name">23区全体</div>
+                        <div class="type-badge">選択指標：{escape(METRICS[selected_metric]['short_label'])}</div>
+                        <div class="profile-summary">
+                            地図とランキングは同じ指標に連動します。区を選ぶと、順位・中央値差・都市タイプまで詳細表示に切り替わります。
+                        </div>
+                        <div class="profile-row"><span>選択指標の最大</span><span>{escape(str(representative['自治体']))}</span></div>
+                        <div class="profile-row"><span>最大値</span><span>{escape(format_value(selected_metric, float(representative[metric_column])))}</span></div>
+                        <div class="profile-row"><span>中央値</span><span>{escape(format_value(selected_metric, float(data[metric_column].median())))}</span></div>
+                        <div class="profile-row"><span>最小値</span><span>{escape(format_value(selected_metric, float(data[metric_column].min())))}</span></div>
+                        <div class="profile-row"><span>データ件数</span><span>23区</span></div>
                     </div>
-                    <div class="signal-item">
-                        <strong>{int(selected_discovery['高齢化率順位'])}位</strong>
-                        <span>高齢化率順位</span>
-                    </div>
-                    <div class="signal-item">
-                        <strong>{float(selected_discovery['人口増減率']):+.2f}%</strong>
-                        <span>人口増減率</span>
-                    </div>
-                    <div class="signal-item">
-                        <strong>{int(selected_discovery['総合距離順位'])}位</strong>
-                        <span>中央値からの距離</span>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with profile_column:
-        st.markdown("#### 23区中央値との違い")
-        st.markdown(
-            '<div class="discovery-explainer">'
-            '<strong>0が23区中央値</strong>です。プラスは中央値より高く、'
-            'マイナスは低いことを示します。単位差をなくすため、'
-            '四分位範囲で標準化しています。'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        st.altair_chart(
-            discovery_profile_chart(selected_discovery),
-            width="stretch",
-        )
-
-    st.divider()
-    similar_column, distance_column = st.columns(
-        [0.72, 1.28],
-        gap="large",
-    )
-    with similar_column:
-        st.subheader("特徴が近い区")
-        st.caption(
-            "現在値と経年変化の5指標を標準化し、距離が近い3区を表示します。"
-        )
-        similar = find_similar_wards(
-            discovery,
-            discovery_ward,
-            limit=3,
-        )
-        # DISCOVERY_HTML_RENDER_FIX_V1
-        similar_blocks: list[str] = []
-        for _, similar_row in similar.iterrows():
-            similar_blocks.append(
-                "".join(
-                    [
-                        '<div class="similar-item">',
-                        "<div>",
-                        f"<strong>{escape(str(similar_row['自治体']))}</strong>",
-                        "<span>",
-                        f"{escape(str(similar_row['都市タイプ']))}型・",
-                        f"人口増減率 {float(similar_row['人口増減率']):+.2f}%",
-                        "</span>",
-                        "</div>",
-                        '<div class="similar-score">',
-                        f"{float(similar_row['類似度']):.0f}",
-                        "</div>",
-                        "</div>",
-                    ]
+                    """,
+                    unsafe_allow_html=True,
                 )
-            )
-        similar_html = (
-            '<div class="similar-list">'
-            + "".join(similar_blocks)
-            + "</div>"
-        )
+            else:
+                selected_row = data.loc[data["自治体"] == selected_ward].iloc[0]
+                st.markdown(
+                    profile_html(selected_row, data, selected_metric),
+                    unsafe_allow_html=True,
+                )
         st.markdown(
-            similar_html,
+            '<p class="source-note">統計値は2026年版、行政境界は2023年1月1日時点です。境界データは地理的比較のために使用しています。</p>',
             unsafe_allow_html=True,
         )
-        st.caption(
-            "類似度は確率ではなく、距離を0〜100に変換した探索用の目安です。"
-        )
 
-    with distance_column:
-        st.subheader("中央値から離れた特徴を持つ区")
+if compare_tab.open:
+    with compare_tab:
+        st.subheader("2つの区を、同じ基準で比較する")
+        st.markdown(
+            '<div class="section-intro">絶対値と、23区中央値を100とした指数の両方を表示します。単位の異なる指標を無理に合算しません。</div>',
+            unsafe_allow_html=True,
+        )
+        selector_a, selector_b = st.columns(2)
+        ward_names = data["自治体"].tolist()
+        default_a = ward_names.index("足立区") if "足立区" in ward_names else 0
+        with selector_a:
+            ward_a = st.selectbox("比較する区 A", ward_names, index=default_a, key="ward_a")
+        options_b = [ward for ward in ward_names if ward != ward_a]
+        default_b = options_b.index("豊島区") if "豊島区" in options_b else 0
+        with selector_b:
+            ward_b = st.selectbox("比較する区 B", options_b, index=default_b, key="ward_b")
+        row_a = data.loc[data["自治体"] == ward_a].iloc[0]
+        row_b = data.loc[data["自治体"] == ward_b].iloc[0]
+        st.markdown(
+            f'<div class="comparison-callout">{escape(comparison_text(row_a, row_b))}</div>',
+            unsafe_allow_html=True,
+        )
+        card_a, card_b = st.columns(2, gap="large")
+        with card_a:
+            st.markdown(
+                f"""
+                <div class="panel">
+                    <h3 style="margin-top:0">{escape(ward_a)}</h3>
+                    <span class="rank-chip">人口 {int(row_a['人口順位'])}位</span>
+                    <span class="rank-chip">高齢化率 {int(row_a['高齢化率順位'])}位</span>
+                    <span class="rank-chip">人口密度 {int(row_a['人口密度順位'])}位</span>
+                    <div class="profile-row"><span>人口</span><span>{row_a['人口']:,.0f}人</span></div>
+                    <div class="profile-row"><span>高齢化率</span><span>{row_a['高齢化率']:.2f}%</span></div>
+                    <div class="profile-row"><span>人口密度</span><span>{row_a['人口密度']:,.0f}人/km²</span></div>
+                    <div class="profile-row"><span>中央値分類</span><span>{escape(str(row_a['都市タイプ']))}型</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with card_b:
+            st.markdown(
+                f"""
+                <div class="panel">
+                    <h3 style="margin-top:0">{escape(ward_b)}</h3>
+                    <span class="rank-chip">人口 {int(row_b['人口順位'])}位</span>
+                    <span class="rank-chip">高齢化率 {int(row_b['高齢化率順位'])}位</span>
+                    <span class="rank-chip">人口密度 {int(row_b['人口密度順位'])}位</span>
+                    <div class="profile-row"><span>人口</span><span>{row_b['人口']:,.0f}人</span></div>
+                    <div class="profile-row"><span>高齢化率</span><span>{row_b['高齢化率']:.2f}%</span></div>
+                    <div class="profile-row"><span>人口密度</span><span>{row_b['人口密度']:,.0f}人/km²</span></div>
+                    <div class="profile-row"><span>中央値分類</span><span>{escape(str(row_b['都市タイプ']))}型</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.altair_chart(make_comparison_index_chart(row_a, row_b), width="stretch")
+        st.caption("破線の100が23区中央値です。100を上回るほど、中央値より高いことを示します。")
+
+if analysis_tab.open:
+    with analysis_tab:
+        st.subheader("人口密度と高齢化率から、23区の構造を読む")
+        st.markdown(
+            '<div class="section-intro">中央値の縦線・横線で4タイプに分けています。分類は発見を補助するための便宜的なもので、政策的な優劣を示しません。</div>',
+            unsafe_allow_html=True,
+        )
+        analysis_left, analysis_right = st.columns([1.35, 0.65], gap="large")
+        with analysis_left:
+            st.altair_chart(make_scatter_chart(data, selected_ward), width="stretch")
+        with analysis_right:
+            corr = float(data["人口密度"].corr(data["高齢化率"]))
+            st.markdown(
+                f"""
+                <div class="panel">
+                    <div class="profile-kicker">Relationship</div>
+                    <div class="profile-name" style="font-size:1.75rem">r = {corr:.2f}</div>
+                    <div class="profile-summary">{escape(correlation_description(corr))}相関は因果関係を示さないため、住宅構成・年齢移動・土地利用などの背景要因は別途検討が必要です。</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            type_counts = data["都市タイプ"].value_counts()
+            for label in QUADRANT_COLORS:
+                count = int(type_counts.get(label, 0))
+                st.markdown(
+                    f"""
+                    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding:.63rem .2rem">
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:{QUADRANT_COLORS[label]};margin-right:8px"></span>{label}型</span>
+                        <strong>{count}区</strong>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        st.divider()
+        rank_left, rank_right = st.columns([1.25, 0.75], gap="large")
+        with rank_left:
+            st.subheader(f"{METRICS[selected_metric]['label']}ランキング")
+            st.altair_chart(
+                make_ranking_chart(data, selected_metric, selected_ward),
+                width="stretch",
+            )
+            st.caption("破線は23区中央値です。注目する区を選ぶとオレンジ色で強調されます。")
+        with rank_right:
+            st.subheader("上位・下位")
+            top = data.nlargest(5, metric_column)[["自治体", metric_column]]
+            bottom = data.nsmallest(5, metric_column)[["自治体", metric_column]]
+            st.markdown("**上位5区**")
+            for _, row in top.iterrows():
+                st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
+            st.markdown("**下位5区**")
+            for _, row in bottom.iterrows():
+                st.markdown(f"- **{row['自治体']}**　{format_value(selected_metric, float(row[metric_column]))}")
+
+
+if discovery_tab.open:
+    with discovery_tab:
+        discovery = build_discovery_dataset(data, history)
+        discovery_start_year = int(history["年"].min())
+        discovery_end_year = int(history["年"].max())
+
+        st.subheader("データから、注目すべき区を発見する")
         st.markdown(
             '<div class="section-intro">'
-            '人口・高齢化率・人口密度・人口増減率・高齢化率変化の5指標を'
-            '同じ基準にそろえ、中央値からの総合距離を表示します。'
+            '現在値と経年変化を組み合わせ、人口増加、高齢化の変化、都市密度、'
+            '23区中央値からの離れ方を自動で抽出します。ここでの距離や類似度は'
+            '優劣ではなく、特徴を見つけるための探索指標です。'
             '</div>',
             unsafe_allow_html=True,
         )
-        st.altair_chart(
-            discovery_distance_chart(discovery, discovery_ward),
-            width="stretch",
-        )
-        st.caption(
-            "値が大きいほど複数指標の組み合わせが23区の中央値から離れています。"
-            "良し悪しや政策評価を表すものではありません。"
-        )
 
-with history_tab:
-    st.subheader("2015年以降の変化を追う")
-    st.markdown(
-        '<div class="section-intro">毎年1月1日現在の住民基本台帳データを使い、人口と高齢化率の変化を区別に確認します。現況タブとは統計体系が異なるため、絶対値が一致しない場合があります。</div>',
-        unsafe_allow_html=True,
-    )
-    available_years = sorted(history["年"].unique().tolist())
-    start_default = available_years.index(2015) if 2015 in available_years else 0
-    end_default = len(available_years) - 1
-    control_a, control_b, control_c, control_d = st.columns([0.8, 0.8, 1.1, 1.3])
-    with control_a:
-        start_year = st.selectbox(
-            "開始年", available_years[:-1], index=min(start_default, len(available_years) - 2), key="history_start"
-        )
-    end_options = [year for year in available_years if year > start_year]
-    with control_b:
-        end_year = st.selectbox(
-            "終了年", end_options, index=len(end_options) - 1, key="history_end"
-        )
-    with control_c:
-        change_metric = st.radio(
-            "変化地図の指標", ["人口増減率", "高齢化率変化"], horizontal=True
-        )
-    trend_default = selected_ward if selected_ward != "23区全体" else "足立区"
-    with control_d:
-        trend_ward = st.selectbox(
-            "変化を詳しく見る区", data["自治体"].tolist(),
-            index=data["自治体"].tolist().index(trend_default) if trend_default in data["自治体"].tolist() else 0,
-            key="history_ward",
-        )
+        fastest_growth = discovery.loc[discovery["人口増減率"].idxmax()]
+        largest_aging_shift = discovery.loc[discovery["高齢化率変化"].idxmax()]
+        highest_density_discovery = discovery.loc[discovery["人口密度"].idxmax()]
+        most_distinctive = discovery.loc[
+            discovery["中央値からの総合距離"].idxmax()
+        ]
 
-    changes = calculate_period_changes(history, start_year, end_year)
-    summary = period_summary(history, start_year, end_year)
-    population_growth = changes.loc[changes["人口増減率"].idxmax()]
-    aging_growth = changes.loc[changes["高齢化率変化"].idxmax()]
-
-    history_cards = st.columns(4)
-    with history_cards[0]:
-        stat_card(
-            f"23区人口 {start_year}→{end_year}",
-            f"{summary['人口増減率']:+.2f}%",
-            f"{summary['人口増減']:+,.0f}人",
-        )
-    with history_cards[1]:
-        stat_card(
-            "人口加重の高齢化率",
-            f"{summary['終了高齢化率']:.2f}%",
-            f"{summary['高齢化率変化']:+.2f}pt",
-        )
-    with history_cards[2]:
-        stat_card(
-            "人口増加率が最大",
-            str(population_growth["自治体"]),
-            f"{population_growth['人口増減率']:+.2f}%",
-        )
-    with history_cards[3]:
-        stat_card(
-            "高齢化率の上昇幅が最大",
-            str(aging_growth["自治体"]),
-            f"{aging_growth['高齢化率変化']:+.2f}pt",
-        )
-
-    st.markdown(
-        f'<div class="insight-strip">{history_insight(changes, summary, start_year, end_year)}</div>',
-        unsafe_allow_html=True,
-    )
-
-    change_left, change_right = st.columns([1.45, 0.75], gap="large")
-    with change_left:
-        st.subheader(f"{change_metric}の分布")
-        st.markdown(
-            '<div class="section-intro">青は減少、オレンジは増加を示します。色は良し悪しではなく、変化の方向と大きさだけを表します。</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            change_legend_html(changes, change_metric), unsafe_allow_html=True
-        )
-        st.pydeck_chart(
-            make_change_map(raw_geojson, changes, change_metric, trend_ward),
-            width="stretch",
-            height=570,
-        )
-    with change_right:
-        selected_change = changes.loc[changes["自治体"] == trend_ward].iloc[0]
         st.markdown(
             f"""
-            <div class="profile-card" style="min-height:420px">
-                <div class="profile-kicker">Period profile</div>
-                <div class="profile-name">{escape(trend_ward)}</div>
-                <div class="type-badge">{start_year} → {end_year}</div>
-                <div class="profile-summary">人口と高齢化率の変化を同じ期間で確認します。変化の原因は、このデータだけでは特定できません。</div>
-                <div class="profile-row"><span>人口</span><span>{selected_change['開始人口']:,.0f} → {selected_change['終了人口']:,.0f}人</span></div>
-                <div class="profile-row"><span>人口増減</span><span>{selected_change['人口増減']:+,.0f}人</span></div>
-                <div class="profile-row"><span>人口増減率</span><span>{selected_change['人口増減率']:+.2f}%</span></div>
-                <div class="profile-row"><span>高齢化率</span><span>{selected_change['開始高齢化率']:.2f} → {selected_change['終了高齢化率']:.2f}%</span></div>
-                <div class="profile-row"><span>高齢化率変化</span><span>{selected_change['高齢化率変化']:+.2f}pt</span></div>
+            <div class="discovery-grid">
+                <div class="discovery-card">
+                    <div class="discovery-eyebrow">Population mover</div>
+                    <div class="discovery-value">{escape(str(fastest_growth['自治体']))}</div>
+                    <div class="discovery-label">
+                        {discovery_start_year}→{discovery_end_year}年の人口増加率
+                        {float(fastest_growth['人口増減率']):+.2f}%
+                    </div>
+                </div>
+                <div class="discovery-card">
+                    <div class="discovery-eyebrow">Aging shift</div>
+                    <div class="discovery-value">{escape(str(largest_aging_shift['自治体']))}</div>
+                    <div class="discovery-label">
+                        高齢化率の変化
+                        {float(largest_aging_shift['高齢化率変化']):+.2f}pt
+                    </div>
+                </div>
+                <div class="discovery-card">
+                    <div class="discovery-eyebrow">Urban density</div>
+                    <div class="discovery-value">{escape(str(highest_density_discovery['自治体']))}</div>
+                    <div class="discovery-label">
+                        人口密度 {float(highest_density_discovery['人口密度']):,.0f}人/km²
+                    </div>
+                </div>
+                <div class="discovery-card">
+                    <div class="discovery-eyebrow">Most distinctive</div>
+                    <div class="discovery-value">{escape(str(most_distinctive['自治体']))}</div>
+                    <div class="discovery-label">
+                        5指標を合わせた中央値からの距離が最大
+                    </div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.divider()
-    trend_wards = st.multiselect(
-        "推移を重ねて見る区（最大4区）",
-        data["自治体"].tolist(),
-        default=list(dict.fromkeys(
-            ward for ward in [trend_ward, "豊島区", "世田谷区"]
-            if ward in data["自治体"].tolist()
-        ))[:3],
-        max_selections=4,
-    )
-    if not trend_wards:
-        trend_wards = [trend_ward]
-    population_chart, aging_chart = st.columns(2, gap="large")
-    with population_chart:
-        st.altair_chart(
-            make_history_line_chart(
-                history, trend_wards, "人口", "人口の推移", "人口（人）"
-            ),
-            width="stretch",
+        discovery_wards = discovery["自治体"].tolist()
+        discovery_default = (
+            selected_ward
+            if selected_ward in discovery_wards
+            else str(most_distinctive["自治体"])
         )
-    with aging_chart:
-        st.altair_chart(
-            make_history_line_chart(
-                history, trend_wards, "高齢化率", "高齢化率の推移", "高齢化率（%）"
-            ),
-            width="stretch",
+        discovery_ward = st.selectbox(
+            "深掘りする区",
+            discovery_wards,
+            index=discovery_wards.index(discovery_default),
+            key="discovery_ward",
         )
+        selected_discovery = discovery.loc[
+            discovery["自治体"] == discovery_ward
+        ].iloc[0]
 
-    st.divider()
-    ranking_left, ranking_right = st.columns([1.35, 0.65], gap="large")
-    with ranking_left:
-        st.subheader(f"{change_metric}ランキング")
-        st.altair_chart(
-            make_change_ranking_chart(changes, change_metric, trend_ward),
-            width="stretch",
+        story_column, profile_column = st.columns(
+            [0.92, 1.08],
+            gap="large",
         )
-    with ranking_right:
-        st.subheader("変化が大きい区")
-        top_changes = changes.nlargest(5, change_metric)
-        bottom_changes = changes.nsmallest(5, change_metric)
-        st.markdown("**増加側 上位5区**")
-        for _, row in top_changes.iterrows():
-            suffix = "%" if change_metric == "人口増減率" else "pt"
-            st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
-        st.markdown("**減少側 上位5区**")
-        for _, row in bottom_changes.iterrows():
-            suffix = "%" if change_metric == "人口増減率" else "pt"
-            st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
-
-    st.markdown(
-        '<p class="source-note">経年データ：東京都「住民基本台帳による東京都の世帯と人口」の時系列表。各年1月1日現在。人口移動・住宅供給・出生死亡などの要因分析には追加データが必要です。</p>',
-        unsafe_allow_html=True,
-    )
-
-with data_tab:
-    st.subheader("23区の統計一覧")
-    st.markdown(
-        '<div class="section-intro">並び順は上部で選択した指標に連動します。順位・中央値差・都市タイプまで含めてCSV保存できます。</div>',
-        unsafe_allow_html=True,
-    )
-    table_columns = [
-        "自治体",
-        "面積_km2",
-        "人口",
-        "高齢化率",
-        "人口密度",
-        f"{selected_metric}順位",
-        f"{selected_metric}中央値差",
-        "都市タイプ",
-    ]
-    table_data = data[table_columns].sort_values(metric_column, ascending=False).copy()
-    table_data = table_data.rename(
-        columns={
-            f"{selected_metric}順位": "順位",
-            f"{selected_metric}中央値差": "中央値差",
-        }
-    )
-    st.dataframe(
-        table_data,
-        hide_index=True,
-        width="stretch",
-        column_config={
-            "自治体": st.column_config.TextColumn("区"),
-            "面積_km2": st.column_config.NumberColumn("面積", format="%.2f km²"),
-            "人口": st.column_config.NumberColumn("人口", format="localized"),
-            "高齢化率": st.column_config.NumberColumn("高齢化率", format="%.2f%%"),
-            "人口密度": st.column_config.NumberColumn("人口密度", format="localized"),
-            "順位": st.column_config.NumberColumn(f"{selected_metric}順位", format="%d"),
-            "中央値差": st.column_config.NumberColumn("中央値差", format="localized"),
-            "都市タイプ": st.column_config.TextColumn("中央値分類"),
-        },
-    )
-    csv_data = table_data.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "表示データをCSVで保存",
-        data=csv_data,
-        file_name="tokyo_23wards_contest_dashboard.csv",
-        mime="text/csv",
-        width="content",
-    )
-    current_missing = int(data.isna().sum().sum())
-    history_missing = int(history.isna().sum().sum())
-    current_duplicates = int(data.duplicated(["自治体コード"]).sum())
-    history_duplicates = int(history.duplicated(["自治体コード", "年"]).sum())
-    covered_years = sorted(history["年"].unique().tolist())
-
-    st.subheader("データ品質")
-    quality_columns = st.columns(4)
-    quality_columns[0].metric("現況データ", f"{data['自治体'].nunique()}区", border=True)
-    quality_columns[1].metric(
-        "経年データ",
-        f"{covered_years[0]}〜{covered_years[-1]}年",
-        border=True,
-    )
-    quality_columns[2].metric(
-        "欠損値",
-        f"{current_missing + history_missing}件",
-        border=True,
-    )
-    quality_columns[3].metric(
-        "重複行",
-        f"{current_duplicates + history_duplicates}件",
-        border=True,
-    )
-
-    with st.expander("データ品質チェックの詳細"):
-        checks_ok = (
-            data["自治体"].nunique() == 23
-            and history["自治体"].nunique() == 23
-            and current_missing == 0
-            and history_missing == 0
-            and current_duplicates == 0
-            and history_duplicates == 0
-        )
-        if checks_ok:
-            st.success(
-                "23区の件数、欠損、重複、値域を確認済みです。"
-                "GitHub Actionsでも同じ検証を自動実行します。"
+        with story_column:
+            story = discovery_story(
+                selected_discovery,
+                discovery,
+                discovery_start_year,
+                discovery_end_year,
             )
-        else:
-            st.warning("品質チェックに未解決の項目があります。")
+            st.markdown(
+                f"""
+                <div class="story-panel">
+                    <div class="story-kicker">Auto-generated urban brief</div>
+                    <div class="story-title">{escape(discovery_ward)}</div>
+                    <div class="type-badge">{escape(str(selected_discovery['都市タイプ']))}型</div>
+                    <div class="story-text">{escape(story)}</div>
+                    <div class="signal-grid">
+                        <div class="signal-item">
+                            <strong>{int(selected_discovery['人口順位'])}位</strong>
+                            <span>人口順位</span>
+                        </div>
+                        <div class="signal-item">
+                            <strong>{int(selected_discovery['高齢化率順位'])}位</strong>
+                            <span>高齢化率順位</span>
+                        </div>
+                        <div class="signal-item">
+                            <strong>{float(selected_discovery['人口増減率']):+.2f}%</strong>
+                            <span>人口増減率</span>
+                        </div>
+                        <div class="signal-item">
+                            <strong>{int(selected_discovery['総合距離順位'])}位</strong>
+                            <span>中央値からの距離</span>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with profile_column:
+            st.markdown("#### 23区中央値との違い")
+            st.markdown(
+                '<div class="discovery-explainer">'
+                '<strong>0が23区中央値</strong>です。プラスは中央値より高く、'
+                'マイナスは低いことを示します。単位差をなくすため、'
+                '四分位範囲で標準化しています。'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            st.altair_chart(
+                discovery_profile_chart(selected_discovery),
+                width="stretch",
+            )
+
+        st.divider()
+        similar_column, distance_column = st.columns(
+            [0.72, 1.28],
+            gap="large",
+        )
+        with similar_column:
+            st.subheader("特徴が近い区")
+            st.caption(
+                "現在値と経年変化の5指標を標準化し、距離が近い3区を表示します。"
+            )
+            similar = find_similar_wards(
+                discovery,
+                discovery_ward,
+                limit=3,
+            )
+            # DISCOVERY_NATIVE_CARD_FIX_V1
+            for _, similar_row in similar.iterrows():
+                with st.container(border=True):
+                    similar_name, similar_score = st.columns([1.0, 0.32])
+                    with similar_name:
+                        st.markdown(f"**{escape(str(similar_row['自治体']))}**")
+                        st.caption(
+                            f"{escape(str(similar_row['都市タイプ']))}型・"
+                            f"人口増減率 {float(similar_row['人口増減率']):+.2f}%"
+                        )
+                    with similar_score:
+                        st.metric(
+                            "類似度",
+                            f"{float(similar_row['類似度']):.0f}",
+                        )
+            st.caption(
+                "類似度は確率ではなく、距離を0〜100に変換した探索用の目安です。"
+            )
+
+        with distance_column:
+            st.subheader("中央値から離れた特徴を持つ区")
+            st.markdown(
+                '<div class="section-intro">'
+                '人口・高齢化率・人口密度・人口増減率・高齢化率変化の5指標を'
+                '同じ基準にそろえ、中央値からの総合距離を表示します。'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            st.altair_chart(
+                discovery_distance_chart(discovery, discovery_ward),
+                width="stretch",
+            )
+            st.caption(
+                "値が大きいほど複数指標の組み合わせが23区の中央値から離れています。"
+                "良し悪しや政策評価を表すものではありません。"
+            )
+
+if history_tab.open:
+    with history_tab:
+        st.subheader("2015年以降の変化を追う")
         st.markdown(
-            f"- 現況データ：{len(data):,}行、{data['自治体'].nunique()}区\n"
-            f"- 経年データ：{len(history):,}行、{history['自治体'].nunique()}区、"
-            f"{covered_years[0]}〜{covered_years[-1]}年\n"
-            f"- 現況の欠損：{current_missing}件、経年の欠損：{history_missing}件\n"
-            f"- 現況の重複：{current_duplicates}件、経年の重複：{history_duplicates}件"
+            '<div class="section-intro">毎年1月1日現在の住民基本台帳データを使い、人口と高齢化率の変化を区別に確認します。現況タブとは統計体系が異なるため、絶対値が一致しない場合があります。</div>',
+            unsafe_allow_html=True,
+        )
+        available_years = sorted(history["年"].unique().tolist())
+        start_default = available_years.index(2015) if 2015 in available_years else 0
+        end_default = len(available_years) - 1
+        control_a, control_b, control_c, control_d = st.columns([0.8, 0.8, 1.1, 1.3])
+        with control_a:
+            start_year = st.selectbox(
+                "開始年", available_years[:-1], index=min(start_default, len(available_years) - 2), key="history_start"
+            )
+        end_options = [year for year in available_years if year > start_year]
+        with control_b:
+            end_year = st.selectbox(
+                "終了年", end_options, index=len(end_options) - 1, key="history_end"
+            )
+        with control_c:
+            change_metric = st.radio(
+                "変化地図の指標", ["人口増減率", "高齢化率変化"], horizontal=True
+            )
+        trend_default = selected_ward if selected_ward != "23区全体" else "足立区"
+        with control_d:
+            trend_ward = st.selectbox(
+                "変化を詳しく見る区", data["自治体"].tolist(),
+                index=data["自治体"].tolist().index(trend_default) if trend_default in data["自治体"].tolist() else 0,
+                key="history_ward",
+            )
+
+        changes = calculate_period_changes(history, start_year, end_year)
+        summary = period_summary(history, start_year, end_year)
+        population_growth = changes.loc[changes["人口増減率"].idxmax()]
+        aging_growth = changes.loc[changes["高齢化率変化"].idxmax()]
+
+        history_cards = st.columns(4)
+        with history_cards[0]:
+            stat_card(
+                f"23区人口 {start_year}→{end_year}",
+                f"{summary['人口増減率']:+.2f}%",
+                f"{summary['人口増減']:+,.0f}人",
+            )
+        with history_cards[1]:
+            stat_card(
+                "人口加重の高齢化率",
+                f"{summary['終了高齢化率']:.2f}%",
+                f"{summary['高齢化率変化']:+.2f}pt",
+            )
+        with history_cards[2]:
+            stat_card(
+                "人口増加率が最大",
+                str(population_growth["自治体"]),
+                f"{population_growth['人口増減率']:+.2f}%",
+            )
+        with history_cards[3]:
+            stat_card(
+                "高齢化率の上昇幅が最大",
+                str(aging_growth["自治体"]),
+                f"{aging_growth['高齢化率変化']:+.2f}pt",
+            )
+
+        st.markdown(
+            f'<div class="insight-strip">{history_insight(changes, summary, start_year, end_year)}</div>',
+            unsafe_allow_html=True,
         )
 
-    with st.expander("データの出典・設計方針・注意点"):
-        st.markdown(
-            "- 現況統計：東京都『区市町村統計表（2026年）』\n"
-            "- 経年統計：東京都『住民基本台帳による東京都の世帯と人口』時系列表（各年1月1日現在）\n"
-            "- 行政境界：国土交通省『国土数値情報（行政区域データ）』をもとにNIIが加工した2023年1月1日時点のGeoJSON\n"
-            "- 人口密度：人口 ÷ 面積（km²）で算出\n"
-            "- 指数：各指標の23区中央値を100として算出。異なる単位の比較補助にのみ使用\n"
-            "- 都市タイプ：高齢化率と人口密度の各中央値で4分類した便宜的ラベル\n"
-            "- 独自の総合スコアは作らず、公表値と透明な派生指標だけを表示"
+        change_left, change_right = st.columns([1.45, 0.75], gap="large")
+        with change_left:
+            st.subheader(f"{change_metric}の分布")
+            st.markdown(
+                '<div class="section-intro">青は減少、オレンジは増加を示します。色は良し悪しではなく、変化の方向と大きさだけを表します。</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                change_legend_html(changes, change_metric), unsafe_allow_html=True
+            )
+            st.altair_chart(
+                make_change_map_chart(
+                    raw_geojson,
+                    changes,
+                    change_metric,
+                    trend_ward,
+                ),
+                width="stretch",
+            )
+        with change_right:
+            selected_change = changes.loc[changes["自治体"] == trend_ward].iloc[0]
+            st.markdown(
+                f"""
+                <div class="profile-card" style="min-height:420px">
+                    <div class="profile-kicker">Period profile</div>
+                    <div class="profile-name">{escape(trend_ward)}</div>
+                    <div class="type-badge">{start_year} → {end_year}</div>
+                    <div class="profile-summary">人口と高齢化率の変化を同じ期間で確認します。変化の原因は、このデータだけでは特定できません。</div>
+                    <div class="profile-row"><span>人口</span><span>{selected_change['開始人口']:,.0f} → {selected_change['終了人口']:,.0f}人</span></div>
+                    <div class="profile-row"><span>人口増減</span><span>{selected_change['人口増減']:+,.0f}人</span></div>
+                    <div class="profile-row"><span>人口増減率</span><span>{selected_change['人口増減率']:+.2f}%</span></div>
+                    <div class="profile-row"><span>高齢化率</span><span>{selected_change['開始高齢化率']:.2f} → {selected_change['終了高齢化率']:.2f}%</span></div>
+                    <div class="profile-row"><span>高齢化率変化</span><span>{selected_change['高齢化率変化']:+.2f}pt</span></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.divider()
+        trend_wards = st.multiselect(
+            "推移を重ねて見る区（最大4区）",
+            data["自治体"].tolist(),
+            default=list(dict.fromkeys(
+                ward for ward in [trend_ward, "豊島区", "世田谷区"]
+                if ward in data["自治体"].tolist()
+            ))[:3],
+            max_selections=4,
         )
+        if not trend_wards:
+            trend_wards = [trend_ward]
+        population_chart, aging_chart = st.columns(2, gap="large")
+        with population_chart:
+            st.altair_chart(
+                make_history_line_chart(
+                    history, trend_wards, "人口", "人口の推移", "人口（人）"
+                ),
+                width="stretch",
+            )
+        with aging_chart:
+            st.altair_chart(
+                make_history_line_chart(
+                    history, trend_wards, "高齢化率", "高齢化率の推移", "高齢化率（%）"
+                ),
+                width="stretch",
+            )
+
+        st.divider()
+        ranking_left, ranking_right = st.columns([1.35, 0.65], gap="large")
+        with ranking_left:
+            st.subheader(f"{change_metric}ランキング")
+            st.altair_chart(
+                make_change_ranking_chart(changes, change_metric, trend_ward),
+                width="stretch",
+            )
+        with ranking_right:
+            st.subheader("変化が大きい区")
+            top_changes = changes.nlargest(5, change_metric)
+            bottom_changes = changes.nsmallest(5, change_metric)
+            st.markdown("**増加側 上位5区**")
+            for _, row in top_changes.iterrows():
+                suffix = "%" if change_metric == "人口増減率" else "pt"
+                st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
+            st.markdown("**減少側 上位5区**")
+            for _, row in bottom_changes.iterrows():
+                suffix = "%" if change_metric == "人口増減率" else "pt"
+                st.markdown(f"- **{row['自治体']}**　{row[change_metric]:+.2f}{suffix}")
+
         st.markdown(
-            "[東京都 区市町村統計表](https://www.toukei.metro.tokyo.lg.jp/kurasi/2026/ku26-23.htm)  "
-            "／ [住民基本台帳 時系列データ](https://www.toukei.metro.tokyo.lg.jp/juukiy/jy-index.htm)  "
-            "／ [行政境界データ](https://geoshape.ex.nii.ac.jp/city/choropleth/13_city.html)"
+            '<p class="source-note">経年データ：東京都「住民基本台帳による東京都の世帯と人口」の時系列表。各年1月1日現在。人口移動・住宅供給・出生死亡などの要因分析には追加データが必要です。</p>',
+            unsafe_allow_html=True,
         )
+
+if data_tab.open:
+    with data_tab:
+        st.subheader("23区の統計一覧")
+        st.markdown(
+            '<div class="section-intro">並び順は上部で選択した指標に連動します。順位・中央値差・都市タイプまで含めてCSV保存できます。</div>',
+            unsafe_allow_html=True,
+        )
+        table_columns = [
+            "自治体",
+            "面積_km2",
+            "人口",
+            "高齢化率",
+            "人口密度",
+            f"{selected_metric}順位",
+            f"{selected_metric}中央値差",
+            "都市タイプ",
+        ]
+        table_data = data[table_columns].sort_values(metric_column, ascending=False).copy()
+        table_data = table_data.rename(
+            columns={
+                f"{selected_metric}順位": "順位",
+                f"{selected_metric}中央値差": "中央値差",
+            }
+        )
+        st.dataframe(
+            table_data,
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "自治体": st.column_config.TextColumn("区"),
+                "面積_km2": st.column_config.NumberColumn("面積", format="%.2f km²"),
+                "人口": st.column_config.NumberColumn("人口", format="localized"),
+                "高齢化率": st.column_config.NumberColumn("高齢化率", format="%.2f%%"),
+                "人口密度": st.column_config.NumberColumn("人口密度", format="localized"),
+                "順位": st.column_config.NumberColumn(f"{selected_metric}順位", format="%d"),
+                "中央値差": st.column_config.NumberColumn("中央値差", format="localized"),
+                "都市タイプ": st.column_config.TextColumn("中央値分類"),
+            },
+        )
+        csv_data = table_data.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "表示データをCSVで保存",
+            data=csv_data,
+            file_name="tokyo_23wards_contest_dashboard.csv",
+            mime="text/csv",
+            width="content",
+        )
+        current_missing = int(data.isna().sum().sum())
+        history_missing = int(history.isna().sum().sum())
+        current_duplicates = int(data.duplicated(["自治体コード"]).sum())
+        history_duplicates = int(history.duplicated(["自治体コード", "年"]).sum())
+        covered_years = sorted(history["年"].unique().tolist())
+
+        st.subheader("データ品質")
+        quality_columns = st.columns(4)
+        quality_columns[0].metric("現況データ", f"{data['自治体'].nunique()}区", border=True)
+        quality_columns[1].metric(
+            "経年データ",
+            f"{covered_years[0]}〜{covered_years[-1]}年",
+            border=True,
+        )
+        quality_columns[2].metric(
+            "欠損値",
+            f"{current_missing + history_missing}件",
+            border=True,
+        )
+        quality_columns[3].metric(
+            "重複行",
+            f"{current_duplicates + history_duplicates}件",
+            border=True,
+        )
+
+        with st.expander("データ品質チェックの詳細"):
+            checks_ok = (
+                data["自治体"].nunique() == 23
+                and history["自治体"].nunique() == 23
+                and current_missing == 0
+                and history_missing == 0
+                and current_duplicates == 0
+                and history_duplicates == 0
+            )
+            if checks_ok:
+                st.success(
+                    "23区の件数、欠損、重複、値域を確認済みです。"
+                    "GitHub Actionsでも同じ検証を自動実行します。"
+                )
+            else:
+                st.warning("品質チェックに未解決の項目があります。")
+            st.markdown(
+                f"- 現況データ：{len(data):,}行、{data['自治体'].nunique()}区\n"
+                f"- 経年データ：{len(history):,}行、{history['自治体'].nunique()}区、"
+                f"{covered_years[0]}〜{covered_years[-1]}年\n"
+                f"- 現況の欠損：{current_missing}件、経年の欠損：{history_missing}件\n"
+                f"- 現況の重複：{current_duplicates}件、経年の重複：{history_duplicates}件"
+            )
+
+        with st.expander("データの出典・設計方針・注意点"):
+            st.markdown(
+                "- 現況統計：東京都『区市町村統計表（2026年）』\n"
+                "- 経年統計：東京都『住民基本台帳による東京都の世帯と人口』時系列表（各年1月1日現在）\n"
+                "- 行政境界：国土交通省『国土数値情報（行政区域データ）』をもとにNIIが加工した2023年1月1日時点のGeoJSON\n"
+                "- 人口密度：人口 ÷ 面積（km²）で算出\n"
+                "- 指数：各指標の23区中央値を100として算出。異なる単位の比較補助にのみ使用\n"
+                "- 都市タイプ：高齢化率と人口密度の各中央値で4分類した便宜的ラベル\n"
+                "- 独自の総合スコアは作らず、公表値と透明な派生指標だけを表示"
+            )
+            st.markdown(
+                "[東京都 区市町村統計表](https://www.toukei.metro.tokyo.lg.jp/kurasi/2026/ku26-23.htm)  "
+                "／ [住民基本台帳 時系列データ](https://www.toukei.metro.tokyo.lg.jp/juukiy/jy-index.htm)  "
+                "／ [行政境界データ](https://geoshape.ex.nii.ac.jp/city/choropleth/13_city.html)"
+            )
 
 st.divider()
 st.markdown(
