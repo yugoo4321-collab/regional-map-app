@@ -2687,6 +2687,86 @@ def next_gacha_ward(data: pd.DataFrame) -> str:
     return ward_names[next_index]
 
 
+st.markdown(
+    """<style>
+/* BUTTON_CONTRAST_FIX_V1 */
+.stButton > button,
+[data-testid="stButton"] button,
+.stDownloadButton > button,
+[data-testid="stDownloadButton"] button {
+    color-scheme: light !important;
+    background: #FFFFFF !important;
+    color: #17263A !important;
+    -webkit-text-fill-color: #17263A !important;
+    border: 1px solid #315F7B !important;
+    border-radius: 7px !important;
+    box-shadow: 0 3px 10px rgba(31, 47, 65, 0.08) !important;
+    font-weight: 750 !important;
+}
+
+.stButton > button *,
+[data-testid="stButton"] button *,
+.stDownloadButton > button *,
+[data-testid="stDownloadButton"] button * {
+    color: inherit !important;
+    -webkit-text-fill-color: inherit !important;
+    opacity: 1 !important;
+}
+
+.stButton > button:hover,
+[data-testid="stButton"] button:hover,
+.stDownloadButton > button:hover,
+[data-testid="stDownloadButton"] button:hover {
+    background: #EAF1F5 !important;
+    color: #183E57 !important;
+    -webkit-text-fill-color: #183E57 !important;
+    border-color: #244E69 !important;
+    box-shadow: 0 6px 14px rgba(31, 47, 65, 0.12) !important;
+}
+
+.stButton > button[kind="primary"],
+[data-testid="stButton"] button[kind="primary"],
+.stDownloadButton > button[kind="primary"],
+[data-testid="stDownloadButton"] button[kind="primary"] {
+    background: #315F7B !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    border-color: #315F7B !important;
+}
+
+.stButton > button[kind="primary"]:hover,
+[data-testid="stButton"] button[kind="primary"]:hover,
+.stDownloadButton > button[kind="primary"]:hover,
+[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+    background: #244A62 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    border-color: #244A62 !important;
+}
+
+.stButton > button:focus-visible,
+[data-testid="stButton"] button:focus-visible,
+.stDownloadButton > button:focus-visible,
+[data-testid="stDownloadButton"] button:focus-visible {
+    outline: 3px solid rgba(49, 95, 123, 0.32) !important;
+    outline-offset: 2px !important;
+}
+
+.stButton > button:disabled,
+[data-testid="stButton"] button:disabled,
+.stDownloadButton > button:disabled,
+[data-testid="stDownloadButton"] button:disabled {
+    background: #E8EDF2 !important;
+    color: #6B7687 !important;
+    -webkit-text-fill-color: #6B7687 !important;
+    border-color: #CBD4DD !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+</style>""",
+    unsafe_allow_html=True,
+)
+
 try:
     data = add_derived_columns(load_data())
     raw_geojson = load_geojson()
