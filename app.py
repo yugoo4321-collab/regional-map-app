@@ -62,10 +62,119 @@ QUADRANT_COLORS = {
 # PLAIN_HERO_COPY_V1
 # ROBUST_PLAIN_HERO_TITLE_V1
 st.set_page_config(
-    page_title="東京23区 都市データダッシュボード",
+    page_title="東京23区データダッシュボード",
     page_icon="🗺️",
     layout="wide",
     initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """<style>
+/* FINAL_HOMEPAGE_POLISH_V2 */
+.hero,
+.hero-shell,
+.hero-panel {
+    padding: 1.35rem 1.5rem 1.2rem !important;
+    min-height: 0 !important;
+}
+
+.hero h1,
+.hero-title,
+.hero-heading {
+    color: #172033 !important;
+    font-size: clamp(1.95rem, 3.15vw, 2.7rem) !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.045em !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    max-width: none !important;
+    margin-bottom: 0.8rem !important;
+}
+
+.hero p,
+.hero-copy,
+.hero-description {
+    color: #5F6876 !important;
+    font-size: 0.96rem !important;
+    line-height: 1.75 !important;
+    max-width: 900px !important;
+    margin-bottom: 0.9rem !important;
+}
+
+.hero a,
+.hero button,
+.hero-chip,
+.hero-tag {
+    font-size: 0.82rem !important;
+    font-weight: 650 !important;
+    background: #F4F6F8 !important;
+    border: 1px solid #D7DDE5 !important;
+    color: #2E3A49 !important;
+    border-radius: 5px !important;
+    box-shadow: none !important;
+}
+
+.journey-grid,
+.journey-card {
+    display: none !important;
+}
+
+.stat-card,
+.highlight-card,
+.discovery-card,
+.profile-card {
+    border-left: 1px solid #D9DEE5 !important;
+    border-top: 1px solid #D9DEE5 !important;
+}
+
+.stat-card::before,
+.highlight-card::before,
+.discovery-card::before,
+.profile-card::before {
+    display: none !important;
+}
+
+.stat-card .value,
+.stat-value,
+.metric-value {
+    color: #172033 !important;
+    letter-spacing: -0.04em !important;
+}
+
+.block-container > div:first-child {
+    padding-top: 0 !important;
+}
+
+[data-testid="stRadio"] label,
+[data-testid="stSelectbox"] label {
+    color: #485363 !important;
+}
+
+[data-baseweb="tab"] {
+    color: #596474 !important;
+}
+
+[aria-selected="true"][data-baseweb="tab"] {
+    color: #172033 !important;
+}
+
+@media (min-width: 1050px) {
+    .hero h1,
+    .hero-title,
+    .hero-heading {
+        white-space: nowrap !important;
+    }
+}
+
+@media (max-width: 1049px) {
+    .hero h1,
+    .hero-title,
+    .hero-heading {
+        white-space: normal !important;
+    }
+}
+</style>""",
+    unsafe_allow_html=True,
 )
 
 st.markdown(
@@ -1955,7 +2064,7 @@ st.markdown(
     <section class="hero">
         <div class="hero-copy">
             <div class="hero-eyebrow">東京23区の公開統計</div>
-            <h1>東京23区 都市データダッシュボード</h1>
+            <h1>東京23区データダッシュボード</h1>
             <p>
                 人口・高齢化率・人口密度を、地図と比較で確認できます。
                 2015〜2026年の推移と、2025年の人口増減要因を収録しています。
@@ -1998,10 +2107,10 @@ st.markdown(
         </div>
     </section>
     <div class="journey-grid">
-        <div class="journey-card"><span class="journey-index">01</span><div><strong>地図で俯瞰</strong><small>23区の分布を見る</small></div></div>
+        <div class="journey-card"><span class="journey-index">01</span><div><strong>地図</strong><small>23区の分布を見る</small></div></div>
         <div class="journey-card"><span class="journey-index">02</span><div><strong>2区を比較</strong><small>差と順位を捉える</small></div></div>
         <div class="journey-card"><span class="journey-index">03</span><div><strong>構造を分析</strong><small>関係とタイプを読む</small></div></div>
-        <div class="journey-card"><span class="journey-index">04</span><div><strong>変化を追う</strong><small>{hero_start_year}–{hero_end_year}年</small></div></div>
+        <div class="journey-card"><span class="journey-index">04</span><div><strong>経年変化</strong><small>{hero_start_year}–{hero_end_year}年</small></div></div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -2425,7 +2534,7 @@ if factors_tab.open:
 
 if history_tab.open:
     with history_tab:
-        st.subheader("2015年以降の変化を追う")
+        st.subheader("2015年以降の経年変化")
         st.markdown(
             '<div class="section-intro">毎年1月1日現在の住民基本台帳データを使い、人口と高齢化率の変化を区別に確認します。現況タブとは統計体系が異なるため、絶対値が一致しない場合があります。</div>',
             unsafe_allow_html=True,
