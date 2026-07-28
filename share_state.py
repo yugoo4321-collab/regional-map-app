@@ -10,6 +10,7 @@ TAB_TO_SLUG = {
     "3分デモ": "demo",
     "2区比較": "compare",
     "構造分析": "structure",
+    "年齢構成": "age",
     "特徴分析": "features",
     "要因分析": "factors",
     "経年変化": "history",

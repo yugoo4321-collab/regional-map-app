@@ -67,7 +67,15 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 - [要因分析の例](https://teeqy5f9waeoacgwccu4yc.streamlit.app/?tab=factors&ward=杉並区)
 - [提出用リンク一覧](SUBMISSION_LINKS.md)
 
+
+### 年齢構成
+
+2026年1月1日の5歳階級別人口から、人口ピラミッド、23区平均との差、外国人割合を区別に表示します。
+
 ## Project documentation
+
+- [Age Structure](AGE_STRUCTURE.md) — データ定義と検証
+
 
 - [Production Readiness](PRODUCTION_READINESS.md) — 品質ゲートと公開版確認
 

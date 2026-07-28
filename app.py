@@ -11,6 +11,7 @@ import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from age_structure_tab import render_age_structure_tab
 from ui_theme import load_app_styles
 from data_catalog_tab import render_data_catalog
 
@@ -1392,11 +1393,7 @@ initialize_share_state(
     ward_key="selected_ward_main",
 )
 
-map_tab, demo_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "3分デモ", "2区比較", "構造分析", "特徴分析", "要因分析", "経年変化", "プロジェクト", "データ"],
-    key="main_navigation",
-    on_change="rerun",
-)
+map_tab, demo_tab, compare_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '3分デモ', '2区比較', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
 sync_share_state_to_url(
     tab_key="main_navigation",
@@ -1518,6 +1515,11 @@ if compare_tab.open:
             )
         st.altair_chart(make_comparison_index_chart(row_a, row_b), width="stretch")
         st.caption("破線の100が23区中央値です。100を上回るほど、中央値より高いことを示します。")
+
+# AGE_STRUCTURE_TAB_V1
+if age_tab.open:
+    with age_tab:
+        render_age_structure_tab()
 
 if analysis_tab.open:
     with analysis_tab:
