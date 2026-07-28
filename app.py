@@ -15,6 +15,10 @@ import streamlit as st
 from population_factors_tab import render_population_factors_tab
 from project_portfolio_tab import render_project_tab
 from guided_demo_tab import render_demo_tab
+from share_state import (
+    initialize_share_state,
+    sync_share_state_to_url,
+)
 
 DATA_PATH = Path("data/tokyo_wards.csv")
 GEOJSON_PATH = Path("data/tokyo_wards.geojson")
@@ -2918,10 +2922,22 @@ st.markdown(
 )
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
+# SHAREABLE_SUBMISSION_LINKS_V1
+initialize_share_state(
+    data["自治体"].tolist(),
+    tab_key="main_navigation",
+    ward_key="selected_ward_main",
+)
+
 map_tab, demo_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
     ["地図とプロフィール", "3分デモ", "2区比較", "構造分析", "特徴分析", "要因分析", "経年変化", "プロジェクト", "データ"],
     key="main_navigation",
     on_change="rerun",
+)
+
+sync_share_state_to_url(
+    tab_key="main_navigation",
+    ward_key="selected_ward_main",
 )
 
 if map_tab.open:

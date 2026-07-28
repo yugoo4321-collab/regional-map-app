@@ -7,6 +7,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from share_state import build_share_url
+
 
 STYLE = """
 <style>
@@ -480,6 +482,52 @@ def render_project_tab(
         mime="text/html",
         key="download_ward_report",
     )
+
+
+    st.divider()
+    _section("", "提出用リンク")
+    st.caption(
+        "リンクを開くと、指定した画面から始まる。区名もURLに残せる。"
+    )
+
+    demo_url = build_share_url(
+        live_app_url,
+        tab="3分デモ",
+    )
+    project_url = build_share_url(
+        live_app_url,
+        tab="プロジェクト",
+    )
+    factor_url = build_share_url(
+        live_app_url,
+        tab="要因分析",
+        ward=ward,
+    )
+
+    link_columns = st.columns(3)
+    with link_columns[0]:
+        st.link_button(
+            "3分デモを開く",
+            demo_url,
+            use_container_width=True,
+        )
+    with link_columns[1]:
+        st.link_button(
+            "プロジェクト概要",
+            project_url,
+            use_container_width=True,
+        )
+    with link_columns[2]:
+        st.link_button(
+            f"{ward}の要因分析",
+            factor_url,
+            use_container_width=True,
+        )
+
+    with st.expander("提出用URL"):
+        st.code(demo_url, language=None)
+        st.code(project_url, language=None)
+        st.code(factor_url, language=None)
 
     st.markdown(
         (

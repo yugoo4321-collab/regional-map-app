@@ -57,6 +57,14 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 人口規模が近い区の違い、人口と高齢化の時間変化、社会増減と自然増減の分解を、4段階で説明する発表用画面です。各問いの対象区はデータから自動抽出します。
 
+
+## Review links
+
+- [3分デモ](https://teeqy5f9waeoacgwccu4yc.streamlit.app/?tab=demo)
+- [プロジェクト概要](https://teeqy5f9waeoacgwccu4yc.streamlit.app/?tab=project)
+- [要因分析の例](https://teeqy5f9waeoacgwccu4yc.streamlit.app/?tab=factors&ward=杉並区)
+- [提出用リンク一覧](SUBMISSION_LINKS.md)
+
 ## Project documentation
 
 - [UI Copy Guide](UI_COPY_GUIDE.md) — 画面文言の基準と避ける表現

@@ -25,7 +25,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Compile application
-        run: python -m py_compile app.py population_factors_tab.py project_portfolio_tab.py guided_demo_tab.py
+        run: python -m py_compile app.py population_factors_tab.py project_portfolio_tab.py guided_demo_tab.py share_state.py
 
       - name: Validate source data
         run: python validate_project.py
