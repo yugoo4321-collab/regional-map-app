@@ -67,6 +67,9 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 ## Project documentation
 
+- [Design System](DESIGN_SYSTEM.md) — スタイル、文言、アクセシビリティの方針
+
+
 - [UI Copy Guide](UI_COPY_GUIDE.md) — 画面文言の基準と避ける表現
 
 
