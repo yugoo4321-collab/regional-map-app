@@ -70,6 +70,288 @@ st.set_page_config(
 
 st.markdown(
     """<style>
+/* BALANCED_VISUAL_POLISH_V1 */
+:root {
+    --ui-bg: #eef2f6;
+    --ui-paper: #ffffff;
+    --ui-paper-soft: #f7f9fb;
+    --ui-ink: #152235;
+    --ui-body: #3f4d5f;
+    --ui-muted: #687487;
+    --ui-line: #d4dce5;
+    --ui-line-strong: #bdc9d6;
+    --ui-accent: #2f5f7d;
+    --ui-accent-soft: #e6eef3;
+    --ui-warm: #a95f38;
+}
+
+.stApp {
+    background:
+        linear-gradient(180deg, #e9eef3 0, #f3f5f7 260px, #f3f5f7 100%) !important;
+}
+
+.block-container {
+    max-width: 1320px !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 4rem !important;
+}
+
+/* トップ：装飾ではなく、情報誌の表紙程度の強弱 */
+.hero,
+.hero-shell,
+.hero-panel {
+    position: relative !important;
+    overflow: hidden !important;
+    background:
+        linear-gradient(115deg, #ffffff 0%, #f5f8fa 70%, #edf3f6 100%) !important;
+    border: 1px solid var(--ui-line-strong) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 30px rgba(31, 47, 65, 0.07) !important;
+    padding: 1.65rem 1.75rem 1.5rem !important;
+}
+
+.hero::before,
+.hero-shell::before,
+.hero-panel::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 auto 0 0 !important;
+    width: 6px !important;
+    background: var(--ui-accent) !important;
+}
+
+.hero h1,
+.hero-title,
+.hero-heading {
+    color: var(--ui-ink) !important;
+    font-size: clamp(2.1rem, 3.5vw, 3.15rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.045em !important;
+    font-weight: 800 !important;
+    margin: 0 0 0.9rem !important;
+    text-shadow: none !important;
+}
+
+.hero p,
+.hero-copy,
+.hero-description {
+    color: var(--ui-body) !important;
+    font-size: 1rem !important;
+    line-height: 1.8 !important;
+    max-width: 850px !important;
+}
+
+.hero a,
+.hero button,
+.hero-chip,
+.hero-tag {
+    color: #29465c !important;
+    background: #f7f9fb !important;
+    border: 1px solid #cbd6df !important;
+    border-radius: 5px !important;
+    box-shadow: none !important;
+}
+
+/* 通常カード：質素すぎず、装飾過多にもならない */
+.stat-card,
+.panel,
+.profile-card,
+.highlight-card,
+.discovery-card,
+.similar-item,
+.project-report,
+.factor-kpi,
+[data-testid="stMetric"] {
+    background: var(--ui-paper) !important;
+    border: 1px solid var(--ui-line) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 5px 16px rgba(31, 47, 65, 0.055) !important;
+}
+
+.stat-card {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.stat-card::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 0 auto 0 !important;
+    height: 3px !important;
+    background: var(--ui-accent) !important;
+    opacity: 0.72 !important;
+}
+
+.stat-label,
+.stat-meta {
+    color: #5d6a7c !important;
+}
+
+.stat-value {
+    color: var(--ui-ink) !important;
+}
+
+/* 白地に白文字になっていたプロフィールを強制的に修正 */
+.profile-card,
+.profile-card * {
+    text-shadow: none !important;
+}
+
+.profile-card {
+    background:
+        linear-gradient(180deg, #ffffff 0%, #f7f9fb 100%) !important;
+    color: var(--ui-ink) !important;
+    border-color: #cbd6df !important;
+}
+
+.profile-card .profile-kicker {
+    color: var(--ui-accent) !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.04em !important;
+    text-transform: none !important;
+}
+
+.profile-card .profile-name {
+    color: var(--ui-ink) !important;
+    opacity: 1 !important;
+}
+
+.profile-card .profile-summary {
+    color: #465568 !important;
+    opacity: 1 !important;
+}
+
+.profile-card .profile-row {
+    border-top-color: #dce3ea !important;
+}
+
+.profile-card .profile-row span:first-child {
+    color: #617084 !important;
+    opacity: 1 !important;
+}
+
+.profile-card .profile-row span:last-child {
+    color: #17263a !important;
+    opacity: 1 !important;
+}
+
+.profile-card .type-badge {
+    background: var(--ui-accent-soft) !important;
+    border: 1px solid #c6d6e0 !important;
+    color: #274e68 !important;
+}
+
+/* 説明・要点 */
+.insight-strip,
+.comparison-callout,
+.factor-brief,
+.project-note {
+    color: #334357 !important;
+    background: #f8fafb !important;
+    border: 1px solid #d1dae3 !important;
+    border-left: 4px solid var(--ui-accent) !important;
+    border-radius: 7px !important;
+    box-shadow: 0 3px 10px rgba(31, 47, 65, 0.035) !important;
+}
+
+.insight-strip strong {
+    color: #214c69 !important;
+}
+
+.section-intro,
+.source-note,
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+    color: #536276 !important;
+    opacity: 1 !important;
+}
+
+/* 入力欄とタブ */
+.control-panel {
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid var(--ui-line) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 14px rgba(31, 47, 65, 0.04) !important;
+}
+
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div {
+    background: #ffffff !important;
+    border-color: #cdd7e0 !important;
+}
+
+[data-baseweb="tab-list"] {
+    background: transparent !important;
+    border-bottom: 1px solid #cdd6df !important;
+}
+
+[data-baseweb="tab"] {
+    color: #566477 !important;
+    border-radius: 0 !important;
+}
+
+[aria-selected="true"][data-baseweb="tab"] {
+    color: #1d3f56 !important;
+    background: transparent !important;
+}
+
+[aria-selected="true"][data-baseweb="tab"]::after {
+    background: var(--ui-accent) !important;
+}
+
+/* グラフの周囲 */
+[data-testid="stVegaLiteChart"],
+[data-testid="stDeckGlJsonChart"],
+[data-testid="stDataFrame"] {
+    background: #ffffff !important;
+    border: 1px solid #d4dce5 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 5px 16px rgba(31, 47, 65, 0.045) !important;
+    overflow: hidden !important;
+}
+
+/* 本文と見出しのコントラスト */
+h1, h2, h3, h4 {
+    color: var(--ui-ink) !important;
+}
+
+p, li {
+    color: var(--ui-body);
+}
+
+hr {
+    border-color: #d4dce5 !important;
+}
+
+/* 英字装飾は隠し、日本語の機能名を優先 */
+.hero-eyebrow,
+.factor-kicker,
+.factor-section-number,
+.project-label,
+.project-section-no {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .hero,
+    .hero-shell,
+    .hero-panel {
+        padding: 1.35rem 1.25rem !important;
+    }
+
+    .hero h1,
+    .hero-title,
+    .hero-heading {
+        font-size: 2.15rem !important;
+        white-space: normal !important;
+    }
+}
+</style>""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """<style>
 /* FINAL_HOMEPAGE_POLISH_V2 */
 .hero,
 .hero-shell,
@@ -1281,7 +1563,7 @@ def profile_html(row: pd.Series, data: pd.DataFrame, metric: str) -> str:
     metric_diff = float(row[f"{metric}中央値差"])
     return f"""
     <div class="profile-card">
-        <div class="profile-kicker">Selected ward profile</div>
+        <div class="profile-kicker">選択区</div>
         <div class="profile-name">{escape(str(row['自治体']))}</div>
         <div class="type-badge">中央値分類：{escape(str(row['都市タイプ']))}型</div>
         <div class="profile-summary">{escape(selected_summary(row, data))}</div>
@@ -2199,7 +2481,7 @@ if map_tab.open:
                 st.markdown(
                     f"""
                     <div class="profile-card">
-                        <div class="profile-kicker">Tokyo 23 wards overview</div>
+                        <div class="profile-kicker">23区概要</div>
                         <div class="profile-name">23区全体</div>
                         <div class="type-badge">選択指標：{escape(METRICS[selected_metric]['short_label'])}</div>
                         <div class="profile-summary">
@@ -2624,7 +2906,7 @@ if history_tab.open:
             st.markdown(
                 f"""
                 <div class="profile-card" style="min-height:420px">
-                    <div class="profile-kicker">Period profile</div>
+                    <div class="profile-kicker">期間サマリー</div>
                     <div class="profile-name">{escape(trend_ward)}</div>
                     <div class="type-badge">{start_year} → {end_year}</div>
                     <div class="profile-summary">人口と高齢化率の変化を同じ期間で確認します。変化の原因は、このデータだけでは特定できません。</div>
