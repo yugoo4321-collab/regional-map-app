@@ -1,5 +1,7 @@
 # 東京23区 都市構造ダッシュボード
 
+[![Production quality gate](https://github.com/yugoo4321-collab/regional-map-app/actions/workflows/production-quality.yml/badge.svg)](https://github.com/yugoo4321-collab/regional-map-app/actions/workflows/production-quality.yml)
+
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://teeqy5f9waeoacgwccu4yc.streamlit.app)
 
 東京都の公開統計と行政境界データを組み合わせ、東京23区の人口・高齢化率・人口密度を、**地図で俯瞰し、2区比較で違いを捉え、散布図で都市構造を読み解き、経年変化で街の動きを追う**Streamlitダッシュボードです。
@@ -66,6 +68,9 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 - [提出用リンク一覧](SUBMISSION_LINKS.md)
 
 ## Project documentation
+
+- [Production Readiness](PRODUCTION_READINESS.md) — 品質ゲートと公開版確認
+
 
 - [Data Catalog](DATA_CATALOG.md) — データセット、指標定義、検証式
 
@@ -200,3 +205,10 @@ regional-map-app/
 - 詳細は[RUNBOOK.md](RUNBOOK.md)を参照
 
 - [3分デモ用メモ](DEMO_SCRIPT.md) — 発表時の説明順と補足
+
+## Quality gate
+
+```bash
+source .venv/bin/activate
+python scripts/quality_gate.py
+```
