@@ -67,6 +67,9 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 ## Project documentation
 
+- [Data Catalog](DATA_CATALOG.md) — データセット、指標定義、検証式
+
+
 - [Design System](DESIGN_SYSTEM.md) — スタイル、文言、アクセシビリティの方針
 
 

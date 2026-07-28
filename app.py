@@ -12,6 +12,7 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 from ui_theme import load_app_styles
+from data_catalog_tab import render_data_catalog
 
 from population_factors_tab import render_population_factors_tab
 from project_portfolio_tab import render_project_tab
@@ -1940,6 +1941,17 @@ if project_tab.open:
 
 if data_tab.open:
     with data_tab:
+        # DATA_CATALOG_PANEL_V1
+        render_data_catalog(
+            current_data=data,
+            history=history,
+            current_path=str(DATA_PATH),
+            history_path=str(HISTORY_PATH),
+            factor_path=str(FACTORS_PATH),
+            geojson_path=str(GEOJSON_PATH),
+        )
+        st.divider()
+
         st.subheader("23区の統計一覧")
         st.markdown(
             '<div class="section-intro">並び順は上部で選択した指標に連動します。順位・中央値差・都市タイプまで含めてCSV保存できます。</div>',
