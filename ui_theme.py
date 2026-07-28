@@ -17,9 +17,5 @@ def read_app_styles(path: str) -> str:
 
 
 def load_app_styles() -> None:
-    """アプリ共通のCSSを1回だけ読み込む。"""
     css = read_app_styles(str(STYLE_PATH))
-    st.markdown(
-        f"<style>{css}</style>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)

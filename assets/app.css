@@ -1717,3 +1717,89 @@ textarea:focus-visible,
         outline: 2px solid Highlight !important;
     }
 }
+
+/* ACCESSIBILITY_AND_RESPONSIVE_FINAL_V2 */
+
+:root {
+    --focus-ring: #0B63A3;
+    --focus-ring-soft: rgba(11, 99, 163, 0.28);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="tab"]:focus-visible,
+[role="radio"]:focus-visible,
+[role="option"]:focus-visible {
+    outline: 3px solid var(--focus-ring-soft) !important;
+    outline-offset: 2px !important;
+}
+
+[data-baseweb="tab-list"] {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: thin;
+    scroll-behavior: smooth;
+}
+
+[data-baseweb="tab"] {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+}
+
+[aria-selected="true"][data-baseweb="tab"] {
+    font-weight: 800 !important;
+}
+
+.stApp p,
+.stApp li,
+.stApp label,
+.stApp [data-testid="stCaptionContainer"] {
+    opacity: 1 !important;
+}
+
+.stApp small,
+.source-note,
+.section-intro,
+.gacha-caption {
+    color: #536276 !important;
+}
+
+@media (max-width: 760px) {
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    [data-baseweb="tab"] {
+        padding-left: 0.7rem !important;
+        padding-right: 0.7rem !important;
+        font-size: 0.86rem !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (forced-colors: active) {
+    button,
+    [role="tab"],
+    [role="radio"],
+    [role="option"] {
+        border: 1px solid ButtonText !important;
+    }
+
+    [aria-selected="true"][role="tab"] {
+        outline: 2px solid Highlight !important;
+    }
+}
