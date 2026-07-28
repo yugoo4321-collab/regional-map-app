@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import copy
+import json
 from math import exp
 from pathlib import Path
 
 import altair as alt
 import numpy as np
 import pandas as pd
+import pydeck as pdk
 import streamlit as st
 
 
@@ -14,6 +17,7 @@ CURRENT_PATH = ROOT / "data" / "tokyo_wards.csv"
 HISTORY_PATH = ROOT / "data" / "tokyo_wards_history.csv"
 FACTORS_PATH = ROOT / "data" / "tokyo_population_factors_2025.csv"
 AGE_PATH = ROOT / "data" / "tokyo_age_structure_2026.csv"
+GEOJSON_PATH = ROOT / "data" / "tokyo_wards.geojson"
 
 
 BRIEF_STYLE = """
@@ -114,6 +118,23 @@ BRIEF_STYLE = """
         grid-template-columns: 1fr;
     }
 }
+.brief-map-note {
+    margin-top: 0.45rem;
+    color: #5D6B7D;
+    font-size: 0.78rem;
+    line-height: 1.65;
+}
+.brief-pair-note {
+    padding: 0.78rem 0.9rem;
+    border: 1px solid #D6DEE6;
+    border-left: 4px solid #6D648D;
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: #405064;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+}
 </style>
 """
 
@@ -125,6 +146,18 @@ def load_brief_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Data
     factors = pd.read_csv(FACTORS_PATH, dtype={"自治体コード": str})
     age = pd.read_csv(AGE_PATH, dtype={"自治体コード": str})
     return current, history, factors, age
+
+
+@st.cache_data(show_spinner=False)
+def load_brief_geojson() -> dict:
+    with GEOJSON_PATH.open(encoding="utf-8") as file:
+        geojson = json.load(file)
+    features = geojson.get("features", [])
+    if len(features) != 23:
+        raise ValueError(
+            f"行政区域が23件ではなく{len(features)}件です"
+        )
+    return geojson
 
 
 @st.cache_data(show_spinner=False)
@@ -291,6 +324,262 @@ def similarity_table(frame: pd.DataFrame, ward: str) -> pd.DataFrame:
         scaled.loc[~scaled["自治体"].eq(ward)]
         .sort_values(["距離", "自治体"])
         .reset_index(drop=True)
+    )
+
+
+def similarity_map_frame(
+    frame: pd.DataFrame,
+    ward: str,
+) -> pd.DataFrame:
+    similar = similarity_table(frame, ward).copy()
+    similar["順位"] = range(1, len(similar) + 1)
+
+    selected = pd.DataFrame(
+        {
+            "自治体": [ward],
+            "距離": [0.0],
+            "近さ": [100.0],
+            "順位": [0],
+        }
+    )
+    result = pd.concat(
+        [selected, similar],
+        ignore_index=True,
+    )
+
+    minimum = float(result.loc[result["順位"].gt(0), "近さ"].min())
+    denominator = max(100.0 - minimum, 1.0)
+    result["地図指数"] = (
+        (result["近さ"] - minimum) / denominator * 100
+    ).clip(0, 100)
+    result.loc[result["自治体"].eq(ward), "地図指数"] = 100
+    return result
+
+
+def similarity_color(value: float) -> list[int]:
+    ratio = min(max(float(value) / 100, 0), 1)
+    start = (226, 232, 240)
+    end = (36, 91, 136)
+    return [
+        int(start[index] + (end[index] - start[index]) * ratio)
+        for index in range(3)
+    ] + [235]
+
+
+def prepare_similarity_geojson(
+    frame: pd.DataFrame,
+    ward: str,
+) -> dict:
+    map_frame = similarity_map_frame(frame, ward)
+    similarity_lookup = map_frame.set_index("自治体").to_dict("index")
+    ward_lookup = frame.set_index("自治体コード")["自治体"].to_dict()
+
+    prepared = copy.deepcopy(load_brief_geojson())
+    for feature in prepared["features"]:
+        properties = feature.setdefault("properties", {})
+        code = str(properties.get("N03_007", "")).zfill(5)
+        name = ward_lookup.get(code)
+        row = similarity_lookup.get(name)
+
+        if row is None:
+            properties.update(
+                {
+                    "自治体": name or "不明",
+                    "近さ表示": "—",
+                    "順位表示": "—",
+                    "fill_color": [225, 230, 235, 180],
+                    "line_color": [150, 158, 168, 220],
+                    "line_width": 1,
+                }
+            )
+            continue
+
+        rank = int(row["順位"])
+        selected = name == ward
+        close_three = 1 <= rank <= 3
+
+        properties.update(
+            {
+                "自治体": name,
+                "近さ表示": (
+                    "基準"
+                    if selected
+                    else f"{int(row['近さ'])}"
+                ),
+                "順位表示": (
+                    "選択区"
+                    if selected
+                    else f"{rank}位"
+                ),
+                "fill_color": (
+                    [18, 39, 61, 245]
+                    if selected
+                    else similarity_color(row["地図指数"])
+                ),
+                "line_color": (
+                    [15, 23, 42, 255]
+                    if selected
+                    else (
+                        [180, 83, 9, 255]
+                        if close_three
+                        else [255, 255, 255, 230]
+                    )
+                ),
+                "line_width": 5 if selected else (3 if close_three else 1),
+            }
+        )
+
+    return prepared
+
+
+def similarity_map(
+    frame: pd.DataFrame,
+    ward: str,
+) -> pdk.Deck:
+    layer = pdk.Layer(
+        "GeoJsonLayer",
+        data=prepare_similarity_geojson(frame, ward),
+        pickable=True,
+        stroked=True,
+        filled=True,
+        get_fill_color="properties.fill_color",
+        get_line_color="properties.line_color",
+        get_line_width="properties.line_width",
+        line_width_min_pixels=1,
+        auto_highlight=True,
+        highlight_color=[245, 158, 11, 170],
+    )
+    return pdk.Deck(
+        map_style=None,
+        initial_view_state=pdk.ViewState(
+            latitude=35.69,
+            longitude=139.745,
+            zoom=10.45,
+        ),
+        layers=[layer],
+        tooltip={
+            "html": (
+                "<div style='font-size:15px'><b>{自治体}</b></div>"
+                "<div style='margin-top:6px'>近さ: <b>{近さ表示}</b></div>"
+                "<div>{順位表示}</div>"
+            )
+        },
+    )
+
+
+def similarity_feature_data(
+    frame: pd.DataFrame,
+    ward: str,
+    comparison_ward: str,
+) -> pd.DataFrame:
+    metrics = [
+        ("人口", "人口"),
+        ("高齢化率", "高齢化率"),
+        ("人口密度", "人口密度"),
+        ("人口増減率", "人口増減率"),
+        ("高齢化率変化", "高齢化率変化"),
+        ("社会増減", "社会増減"),
+        ("自然増減", "自然増減"),
+        ("15–64歳割合", "15–64歳"),
+        ("65歳以上割合", "65歳以上"),
+        ("外国人割合", "外国人"),
+    ]
+
+    scaled = pd.DataFrame(
+        {
+            column: robust_scale(frame[column])
+            for column, _ in metrics
+        }
+    )
+    scaled.insert(0, "自治体", frame["自治体"].values)
+
+    first = scaled.loc[scaled["自治体"].eq(ward)].iloc[0]
+    second = scaled.loc[
+        scaled["自治体"].eq(comparison_ward)
+    ].iloc[0]
+
+    rows = []
+    for column, label in metrics:
+        rows.append(
+            {
+                "指標": label,
+                "標準化差": abs(
+                    float(first[column]) - float(second[column])
+                ),
+            }
+        )
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["標準化差", "指標"])
+        .reset_index(drop=True)
+    )
+
+
+def similarity_feature_chart(
+    frame: pd.DataFrame,
+    ward: str,
+    comparison_ward: str,
+) -> alt.Chart:
+    chart_data = similarity_feature_data(
+        frame,
+        ward,
+        comparison_ward,
+    )
+    return (
+        alt.Chart(chart_data)
+        .mark_bar(cornerRadiusEnd=4, height=22)
+        .encode(
+            x=alt.X(
+                "標準化差:Q",
+                title="標準化した差（小さいほど近い）",
+                axis=alt.Axis(gridColor="#E7EBF0"),
+            ),
+            y=alt.Y(
+                "指標:N",
+                title=None,
+                sort=alt.SortField(
+                    field="標準化差",
+                    order="ascending",
+                ),
+            ),
+            color=alt.Color(
+                "標準化差:Q",
+                scale=alt.Scale(
+                    range=["#6D92B0", "#A55D39"],
+                ),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("指標:N"),
+                alt.Tooltip("標準化差:Q", format=".2f"),
+            ],
+        )
+        .properties(height=340)
+        .configure_view(strokeOpacity=0)
+        .configure(background="transparent")
+    )
+
+
+def similarity_pair_text(
+    frame: pd.DataFrame,
+    ward: str,
+    comparison_ward: str,
+) -> str:
+    differences = similarity_feature_data(
+        frame,
+        ward,
+        comparison_ward,
+    )
+    close_labels = "・".join(
+        differences.head(3)["指標"].tolist()
+    )
+    gap_labels = "・".join(
+        differences.tail(2)["指標"].tolist()
+    )
+    return (
+        f"{ward}と{comparison_ward}は、"
+        f"{close_labels}が特に近い。"
+        f"一方、差が残るのは{gap_labels}。"
     )
 
 
@@ -738,6 +1027,50 @@ def render_ward_brief_tab() -> None:
     st.caption(
         "人口、密度、高齢化、長期変化、人口動態、年齢構成の10指標を使用。"
     )
+
+    closest_ward = similarity_table(frame, ward).iloc[0]["自治体"]
+    st.markdown("### 似ている区はどこにある？")
+    map_column, reason_column = st.columns(
+        [1.08, 0.92],
+        gap="large",
+    )
+    with map_column:
+        st.pydeck_chart(
+            similarity_map(frame, ward),
+            use_container_width=True,
+        )
+        st.markdown(
+            '<div class="brief-map-note">'
+            "濃いほど選択区に近い。黒枠は選択区、茶色の枠は近い3区。"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    with reason_column:
+        st.markdown(
+            (
+                '<div class="brief-pair-note">'
+                + similarity_pair_text(
+                    frame,
+                    ward,
+                    closest_ward,
+                )
+                + "</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"#### {closest_ward}と何が近い？")
+        st.altair_chart(
+            similarity_feature_chart(
+                frame,
+                ward,
+                closest_ward,
+            ),
+            width="stretch",
+        )
+        st.caption(
+            "棒が短いほど近い。似ている理由と、残る違いを同じ図で見る。"
+        )
 
     download_columns = st.columns([0.28, 0.72])
     with download_columns[0]:

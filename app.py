@@ -1394,7 +1394,7 @@ initialize_share_state(
     ward_key="selected_ward_main",
 )
 
-map_tab, brief_tab, demo_tab, compare_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '区レポート', '3分デモ', '2区比較', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
+map_tab, brief_tab, brief_tab, demo_tab, compare_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '区レポート', '区レポート', '3分デモ', '2区比較', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
 sync_share_state_to_url(
     tab_key="main_navigation",
