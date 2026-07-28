@@ -52,6 +52,11 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 2025年中の人口変化を、他県移動、都内間移動、出生・死亡、その他増減へ分解します。区別の要因分解、地図、社会増減×自然増減の散布図、ランキングを通じて、人口が「なぜ」変化したかを確認できます。
 
 
+
+### 3分デモ
+
+人口規模が近い区の違い、人口と高齢化の時間変化、社会増減と自然増減の分解を、4段階で説明する発表用画面です。各問いの対象区はデータから自動抽出します。
+
 ## Project documentation
 
 - [Project Story](PROJECT_STORY.md) — 課題設定、設計判断、試行錯誤、限界
@@ -176,3 +181,5 @@ regional-map-app/
 - 公開版はStreamlit Community Cloudで稼働
 - Mac内の確認用サーバーはlaunchdで常駐
 - 詳細は[RUNBOOK.md](RUNBOOK.md)を参照
+
+- [3分デモ用メモ](DEMO_SCRIPT.md) — 発表時の説明順と補足

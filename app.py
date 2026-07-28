@@ -14,6 +14,7 @@ import streamlit as st
 
 from population_factors_tab import render_population_factors_tab
 from project_portfolio_tab import render_project_tab
+from guided_demo_tab import render_demo_tab
 
 DATA_PATH = Path("data/tokyo_wards.csv")
 GEOJSON_PATH = Path("data/tokyo_wards.geojson")
@@ -2837,8 +2838,8 @@ st.markdown(
 )
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
-map_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "特徴分析", "要因分析", "経年変化", "プロジェクト", "データ"],
+map_tab, demo_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
+    ["地図とプロフィール", "3分デモ", "2区比較", "構造分析", "特徴分析", "要因分析", "経年変化", "プロジェクト", "データ"],
     key="main_navigation",
     on_change="rerun",
 )
@@ -2890,6 +2891,15 @@ if map_tab.open:
         st.markdown(
             '<p class="source-note">統計値は2026年版、行政境界は2023年1月1日時点です。境界データは地理的比較のために使用しています。</p>',
             unsafe_allow_html=True,
+        )
+
+# GUIDED_DEMO_TAB_V1
+if demo_tab.open:
+    with demo_tab:
+        render_demo_tab(
+            current_data=data,
+            history=history,
+            factor_path=str(FACTORS_PATH),
         )
 
 if compare_tab.open:
