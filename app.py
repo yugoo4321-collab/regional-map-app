@@ -11,6 +11,7 @@ import pydeck as pdk
 import streamlit as st
 
 from population_factors_tab import render_population_factors_tab
+from project_portfolio_tab import render_project_tab
 
 DATA_PATH = Path("data/tokyo_wards.csv")
 GEOJSON_PATH = Path("data/tokyo_wards.geojson")
@@ -2055,8 +2056,8 @@ st.markdown(
 )
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
-map_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "要因分析", "経年変化", "データ"],
+map_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
+    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "要因分析", "経年変化", "プロジェクト", "データ"],
     key="main_navigation",
     on_change="rerun",
 )
@@ -2575,6 +2576,17 @@ if history_tab.open:
         st.markdown(
             '<p class="source-note">経年データ：東京都「住民基本台帳による東京都の世帯と人口」の時系列表。各年1月1日現在。人口移動・住宅供給・出生死亡などの要因分析には追加データが必要です。</p>',
             unsafe_allow_html=True,
+        )
+
+# PROJECT_PORTFOLIO_TAB_V1
+if project_tab.open:
+    with project_tab:
+        render_project_tab(
+            current_data=data,
+            history=history,
+            geojson=raw_geojson,
+            factor_path=str(FACTORS_PATH),
+            live_app_url=LIVE_APP_URL,
         )
 
 if data_tab.open:

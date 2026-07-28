@@ -51,6 +51,14 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 2025年中の人口変化を、他県移動、都内間移動、出生・死亡、その他増減へ分解します。区別の要因分解、地図、社会増減×自然増減の散布図、ランキングを通じて、人口が「なぜ」変化したかを確認できます。
 
+
+## Project documentation
+
+- [Project Story](PROJECT_STORY.md) — 課題設定、設計判断、試行錯誤、限界
+- [Changelog](CHANGELOG.md) — 実装の改善履歴
+- `tests/test_project_integrity.py` — データ整合性テスト
+- `.github/workflows/portfolio-quality.yml` — 自動検証
+
 ## 分析の導線
 
 1. **地図とプロフィール**：23区全体を俯瞰し、選択区の特徴を確認
