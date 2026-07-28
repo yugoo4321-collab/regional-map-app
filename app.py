@@ -10,9 +10,12 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
+from population_factors_tab import render_population_factors_tab
+
 DATA_PATH = Path("data/tokyo_wards.csv")
 GEOJSON_PATH = Path("data/tokyo_wards.geojson")
 HISTORY_PATH = Path("data/tokyo_wards_history.csv")
+FACTORS_PATH = Path("data/tokyo_population_factors_2025.csv")
 LIVE_APP_URL = "https://teeqy5f9waeoacgwccu4yc.streamlit.app"
 
 METRICS = {
@@ -55,8 +58,10 @@ QUADRANT_COLORS = {
     "若年・低密度": "#64748B",
 }
 
+# PLAIN_HERO_COPY_V1
+# ROBUST_PLAIN_HERO_TITLE_V1
 st.set_page_config(
-    page_title="東京23区 都市構造ダッシュボード",
+    page_title="東京23区 都市データダッシュボード",
     page_icon="🗺️",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -1943,21 +1948,21 @@ st.markdown(
     f"""
     <section class="hero">
         <div class="hero-copy">
-            <div class="hero-eyebrow">TOKYO 23 WARDS · OFFICIAL OPEN DATA</div>
-            <h1>東京23区を、<span>数字で歩く。</span></h1>
+            <div class="hero-eyebrow">TOKYO 23 WARDS DATA</div>
+            <h1>東京23区 都市データダッシュボード</h1>
             <p>
-                都市の現在地を地図で捉え、区同士の差を比較し、構造と時間変化まで掘り下げる。
-                東京都の公開統計を、発見につながる一つの分析体験へ整理しました。
+                人口・高齢化率・人口密度を、地図と比較で確認できます。
+                2015〜2026年の推移と、2025年の人口増減要因を収録しています。
             </p>
             <div class="hero-tags">
-                <div class="hero-tag">現在地を俯瞰</div>
+                <div class="hero-tag">地図</div>
                 <div class="hero-tag">2区を比較</div>
-                <div class="hero-tag">都市構造を分析</div>
+                <div class="hero-tag">構造分析</div>
                 <div class="hero-tag">{hero_start_year}–{hero_end_year}年を追跡</div>
             </div>
         </div>
         <div class="hero-visual">
-            <div class="visual-topline"><span>URBAN SIGNAL</span><span>OFFICIAL DATA</span></div>
+            <div class="visual-topline"><span>DATA OVERVIEW</span><span>TOKYO OPEN DATA</span></div>
             <svg class="city-network" viewBox="0 0 520 280" role="img" aria-label="都市ネットワークの抽象図">
                 <path class="network-line" d="M26 201 C98 146,145 228,212 163 S345 79,491 113"/>
                 <path class="network-line" d="M47 82 C121 117,170 66,232 106 S349 215,477 180"/>
@@ -2050,8 +2055,8 @@ st.markdown(
 )
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
-map_tab, compare_tab, analysis_tab, discovery_tab, history_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "経年変化", "データ"],
+map_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, data_tab = st.tabs(
+    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "要因分析", "経年変化", "データ"],
     key="main_navigation",
     on_change="rerun",
 )
@@ -2402,6 +2407,15 @@ if discovery_tab.open:
                 "値が大きいほど複数指標の組み合わせが23区の中央値から離れています。"
                 "良し悪しや政策評価を表すものではありません。"
             )
+
+# POPULATION_FACTORS_TAB_V1
+if factors_tab.open:
+    with factors_tab:
+        render_population_factors_tab(
+            current_data=data,
+            geojson=raw_geojson,
+            factor_path=str(FACTORS_PATH),
+        )
 
 if history_tab.open:
     with history_tab:
