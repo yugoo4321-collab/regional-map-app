@@ -77,7 +77,15 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 現在値、長期変化、人口動態、年齢構成を1ページにまとめ、10指標の類似度を地図と指標別の差で表示します。
 
+
+### 調査ボード
+
+2〜4区を固定し、若い世代、人口の動き、高齢化、国際性などの切り口で比較します。
+
 ## Project documentation
+
+- [Investigation Board](INVESTIGATION_BOARD.md) — 比較指標と出力
+
 
 - [Ward Brief](WARD_BRIEF.md) — 指標と近さの計算
 

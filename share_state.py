@@ -10,6 +10,7 @@ TAB_TO_SLUG = {
     "区レポート": "brief",
     "3分デモ": "demo",
     "2区比較": "compare",
+    "調査ボード": "board",
     "構造分析": "structure",
     "年齢構成": "age",
     "特徴分析": "features",
