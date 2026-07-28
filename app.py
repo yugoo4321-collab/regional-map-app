@@ -11,6 +11,7 @@ import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from ward_brief_tab import render_ward_brief_tab
 from age_structure_tab import render_age_structure_tab
 from ui_theme import load_app_styles
 from data_catalog_tab import render_data_catalog
@@ -1393,7 +1394,7 @@ initialize_share_state(
     ward_key="selected_ward_main",
 )
 
-map_tab, demo_tab, compare_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '3分デモ', '2区比較', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
+map_tab, brief_tab, demo_tab, compare_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '区レポート', '3分デモ', '2区比較', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
 sync_share_state_to_url(
     tab_key="main_navigation",
@@ -1450,6 +1451,11 @@ if map_tab.open:
         )
 
 # GUIDED_DEMO_TAB_V1
+# WARD_BRIEF_TAB_V1
+if brief_tab.open:
+    with brief_tab:
+        render_ward_brief_tab()
+
 if demo_tab.open:
     with demo_tab:
         render_demo_tab(

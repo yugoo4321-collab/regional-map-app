@@ -72,7 +72,15 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 2026年1月1日の5歳階級別人口から、2区の人口ピラミッド、構成比の差、外国人割合を比較します。
 
+
+### 区レポート
+
+現在値、長期変化、人口動態、年齢構成を1ページにまとめ、10指標から近い3区を表示します。
+
 ## Project documentation
+
+- [Ward Brief](WARD_BRIEF.md) — 指標と近さの計算
+
 
 - [Age Structure](AGE_STRUCTURE.md) — データ定義と検証
 

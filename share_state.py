@@ -7,6 +7,7 @@ import streamlit as st
 
 TAB_TO_SLUG = {
     "地図とプロフィール": "map",
+    "区レポート": "brief",
     "3分デモ": "demo",
     "2区比較": "compare",
     "構造分析": "structure",
