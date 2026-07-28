@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 import copy
 import json
 from html import escape
@@ -66,6 +68,261 @@ st.set_page_config(
     page_icon="🗺️",
     layout="wide",
     initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """<style>
+/* PLAYFUL_HUMAN_TOUCH_V1 */
+.hero-eyebrow {
+    display: inline-flex !important;
+    width: fit-content !important;
+    align-items: center !important;
+    padding: 0.36rem 0.66rem !important;
+    margin: 0 0 0.9rem 0.1rem !important;
+    border: 1.5px solid #315f7b !important;
+    border-radius: 5px 8px 5px 7px !important;
+    background: #fffdf7 !important;
+    color: #274b63 !important;
+    font-size: 0.76rem !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.02em !important;
+    transform: rotate(-1.15deg) !important;
+    box-shadow: 3px 3px 0 rgba(49, 95, 123, 0.10) !important;
+}
+
+.hero::after,
+.hero-shell::after,
+.hero-panel::after {
+    content: "" !important;
+    position: absolute !important;
+    right: 1.7rem !important;
+    top: 1.45rem !important;
+    width: 74px !important;
+    height: 34px !important;
+    opacity: 0.7 !important;
+    background:
+        radial-gradient(circle, #b9663d 0 2px, transparent 2.5px)
+        0 0 / 15px 15px !important;
+    transform: rotate(5deg) !important;
+    pointer-events: none !important;
+}
+
+.play-zone {
+    margin: 0.85rem 0 1rem;
+}
+
+.play-zone-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+}
+
+.play-zone-title {
+    color: #17263a;
+    font-size: 0.94rem;
+    font-weight: 760;
+}
+
+.play-zone-note {
+    color: #6b7687;
+    font-size: 0.76rem;
+}
+
+.play-rail {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.72rem;
+}
+
+.play-card {
+    --card-accent: #315f7b;
+    position: relative;
+    min-height: 148px;
+    overflow: hidden;
+    padding: 0.9rem 0.95rem 0.85rem;
+    border: 1px solid #cfd8e1;
+    border-radius: 9px 12px 8px 11px;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,0.98), rgba(247,249,251,0.96)),
+        repeating-linear-gradient(
+            -12deg,
+            transparent 0 12px,
+            rgba(45, 70, 90, 0.018) 12px 13px
+        );
+    box-shadow: 0 5px 15px rgba(31, 47, 65, 0.045);
+    transition:
+        transform 180ms cubic-bezier(.2,.8,.2,1),
+        box-shadow 180ms ease,
+        border-color 180ms ease;
+    scroll-snap-align: start;
+}
+
+.play-card:nth-child(2) {
+    --card-accent: #a55d39;
+    transform: rotate(0.2deg);
+}
+
+.play-card:nth-child(3) {
+    --card-accent: #6c648f;
+    transform: rotate(-0.18deg);
+}
+
+.play-card::before {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    top: 0;
+    width: 38px;
+    height: 4px;
+    background: var(--card-accent);
+    border-radius: 0 0 4px 4px;
+}
+
+.play-card:hover {
+    transform: translateY(-3px) rotate(-0.25deg);
+    border-color: #b8c6d3;
+    box-shadow: 0 10px 22px rgba(31, 47, 65, 0.085);
+}
+
+.play-card-label {
+    color: var(--card-accent);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.38rem;
+}
+
+.play-card-title {
+    color: #17263a;
+    font-size: 1.05rem;
+    font-weight: 780;
+    line-height: 1.35;
+    margin-bottom: 0.42rem;
+}
+
+.play-card-copy {
+    color: #566477;
+    font-size: 0.8rem;
+    line-height: 1.62;
+}
+
+.play-card-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.34rem;
+    margin-top: 0.62rem;
+}
+
+.play-fact {
+    padding: 0.22rem 0.42rem;
+    border: 1px solid #d7dfe7;
+    border-radius: 4px 6px 4px 5px;
+    background: rgba(255,255,255,0.78);
+    color: #35465a;
+    font-size: 0.7rem;
+    font-weight: 650;
+}
+
+.play-card details {
+    margin-top: 0.56rem;
+}
+
+.play-card summary {
+    width: fit-content;
+    cursor: pointer;
+    color: #315f7b;
+    font-size: 0.76rem;
+    font-weight: 750;
+    list-style: none;
+    border-bottom: 1px dashed #6f8fa4;
+}
+
+.play-card summary::-webkit-details-marker {
+    display: none;
+}
+
+.play-answer {
+    margin-top: 0.45rem;
+    padding: 0.48rem 0.55rem;
+    background: #fffaf2;
+    border-left: 3px solid #a55d39;
+    color: #3f4d5e;
+    font-size: 0.78rem;
+    line-height: 1.55;
+}
+
+div[data-testid="stButton"] button[kind="secondary"] {
+    border: 1px solid #315f7b !important;
+}
+
+div[data-testid="stButton"] button:hover {
+    transform: translateY(-1px) rotate(-0.2deg);
+}
+
+.gacha-caption {
+    color: #667487;
+    font-size: 0.76rem;
+    line-height: 1.55;
+    padding-top: 0.2rem;
+}
+
+@keyframes playCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(7px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.play-card {
+    animation: playCardIn 360ms ease both;
+}
+
+.play-card:nth-child(2) {
+    animation-delay: 55ms;
+}
+
+.play-card:nth-child(3) {
+    animation-delay: 110ms;
+}
+
+@media (max-width: 850px) {
+    .play-rail {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 0.35rem;
+    }
+
+    .play-card {
+        min-width: min(82vw, 330px);
+    }
+
+    .hero::after,
+    .hero-shell::after,
+    .hero-panel::after {
+        display: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .play-card {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .play-card:hover,
+    div[data-testid="stButton"] button:hover {
+        transform: none !important;
+    }
+}
+</style>""",
+    unsafe_allow_html=True,
 )
 
 st.markdown(
@@ -812,7 +1069,7 @@ st.markdown(
         }
 
         .insight-strip::before {
-            content: "INSIGHT";
+            content: "要点";
             display: inline-block;
             margin-right: .6rem;
             color: #2563EB;
@@ -2329,6 +2586,106 @@ def discovery_distance_chart(
         .properties(height=390)
     )
 
+PLAYFUL_WARD_KEY = "selected_ward_main"
+
+
+def playful_discovery_html(
+    data: pd.DataFrame,
+    history: pd.DataFrame,
+) -> str:
+    """短時間でデータへ入れる、日替わりの探索カードを作る。"""
+    ward_names = data["自治体"].tolist()
+    day_number = date.today().toordinal()
+    daily_ward = ward_names[day_number % len(ward_names)]
+    daily_row = data.loc[data["自治体"].eq(daily_ward)].iloc[0]
+
+    daily_history = (
+        history.loc[history["自治体"].eq(daily_ward)]
+        .sort_values("年")
+    )
+    first = daily_history.iloc[0]
+    last = daily_history.iloc[-1]
+    population_change_rate = (
+        (float(last["人口"]) - float(first["人口"]))
+        / float(first["人口"])
+        * 100
+    )
+
+    metric_cycle = ["人口", "高齢化率", "人口密度"]
+    quiz_metric = metric_cycle[day_number % len(metric_cycle)]
+    quiz_row = data.nlargest(1, quiz_metric).iloc[0]
+
+    largest = data.nlargest(1, "人口").iloc[0]
+    densest = data.nlargest(1, "人口密度").iloc[0]
+    contrast_text = (
+        f"人口が最大なのは{largest['自治体']}、"
+        f"人口密度が最大なのは{densest['自治体']}。"
+        "同じ「大きい」でも、見ている都市の姿は異なります。"
+    )
+
+    if quiz_metric == "高齢化率":
+        quiz_value = f"{float(quiz_row[quiz_metric]):.2f}%"
+    elif quiz_metric == "人口":
+        quiz_value = f"{float(quiz_row[quiz_metric]):,.0f}人"
+    else:
+        quiz_value = f"{float(quiz_row[quiz_metric]):,.0f}人/km²"
+
+    return f"""
+    <section class="play-zone">
+        <div class="play-zone-head">
+            <div class="play-zone-title">まず、ひとつ気になる数字から</div>
+            <div class="play-zone-note">日替わり表示・データは本編と同じ</div>
+        </div>
+        <div class="play-rail">
+            <article class="play-card">
+                <div class="play-card-label">今日の1区</div>
+                <div class="play-card-title">{escape(str(daily_ward))}</div>
+                <div class="play-card-copy">
+                    毎日1区だけ選び、現在値と長期変化を短く表示します。
+                </div>
+                <div class="play-card-facts">
+                    <span class="play-fact">人口 {float(daily_row['人口']):,.0f}人</span>
+                    <span class="play-fact">高齢化率 {float(daily_row['高齢化率']):.2f}%</span>
+                    <span class="play-fact">{int(first['年'])}→{int(last['年'])} {population_change_rate:+.1f}%</span>
+                </div>
+            </article>
+            <article class="play-card">
+                <div class="play-card-label">数字のひっかかり</div>
+                <div class="play-card-title">「最大」はひとつではない</div>
+                <div class="play-card-copy">{escape(contrast_text)}</div>
+            </article>
+            <article class="play-card">
+                <div class="play-card-label">3秒クイズ</div>
+                <div class="play-card-title">{escape(quiz_metric)}が23区で最も高い区は？</div>
+                <div class="play-card-copy">答えを開いてから、地図で周辺との違いを確認できます。</div>
+                <details>
+                    <summary>答えを見る</summary>
+                    <div class="play-answer">
+                        {escape(str(quiz_row['自治体']))}（{escape(quiz_value)}）
+                    </div>
+                </details>
+            </article>
+        </div>
+    </section>
+    """
+
+
+def next_gacha_ward(data: pd.DataFrame) -> str:
+    """連打しても同じ区に偏りにくい順番で、次の区を返す。"""
+    ward_names = data["自治体"].tolist()
+    step = int(st.session_state.get("ward_gacha_step", 0))
+    current = st.session_state.get(PLAYFUL_WARD_KEY, "23区全体")
+
+    if current in ward_names:
+        current_index = ward_names.index(current)
+    else:
+        current_index = date.today().toordinal() % len(ward_names)
+
+    next_index = (current_index + 7 + step * 5) % len(ward_names)
+    st.session_state["ward_gacha_step"] = step + 1
+    return ward_names[next_index]
+
+
 try:
     data = add_derived_columns(load_data())
     raw_geojson = load_geojson()
@@ -2345,7 +2702,7 @@ st.markdown(
     f"""
     <section class="hero">
         <div class="hero-copy">
-            <div class="hero-eyebrow">東京23区の公開統計</div>
+            <div class="hero-eyebrow">公開統計で見る23区</div>
             <h1>東京23区データダッシュボード</h1>
             <p>
                 人口・高齢化率・人口密度を、地図と比較で確認できます。
@@ -2397,6 +2754,33 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    playful_discovery_html(data, history),
+    unsafe_allow_html=True,
+)
+
+if PLAYFUL_WARD_KEY not in st.session_state:
+    st.session_state[PLAYFUL_WARD_KEY] = "23区全体"
+
+gacha_button, gacha_note = st.columns([0.18, 0.82], vertical_alignment="center")
+with gacha_button:
+    if st.button(
+        "区ガチャ",
+        key="ward_gacha_button",
+        use_container_width=True,
+        help="ランダムに近い順番で、次に見る区を選びます",
+    ):
+        st.session_state[PLAYFUL_WARD_KEY] = next_gacha_ward(data)
+
+with gacha_note:
+    st.markdown(
+        '<div class="gacha-caption">'
+        "選ぶ理由が決まっていないときの入口です。選ばれた区は、下の地図と各分析画面に反映されます。"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
 with st.container(border=True):
     control_left, control_right = st.columns([1.08, 0.92])
     with control_left:
@@ -2409,7 +2793,8 @@ with st.container(border=True):
         selected_ward = st.selectbox(
             "注目する区",
             ["23区全体"] + data["自治体"].tolist(),
-        )
+            key="selected_ward_main",
+)
 
 metric_column = METRICS[selected_metric]["column"]
 total_population = int(data["人口"].sum())
