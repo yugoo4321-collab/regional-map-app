@@ -59,6 +59,9 @@ https://teeqy5f9waeoacgwccu4yc.streamlit.app
 
 ## Project documentation
 
+- [UI Copy Guide](UI_COPY_GUIDE.md) — 画面文言の基準と避ける表現
+
+
 - [Project Story](PROJECT_STORY.md) — 課題設定、設計判断、試行錯誤、限界
 - [Changelog](CHANGELOG.md) — 実装の改善履歴
 - `tests/test_project_integrity.py` — データ整合性テスト

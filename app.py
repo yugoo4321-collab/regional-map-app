@@ -2621,7 +2621,7 @@ def playful_discovery_html(
     contrast_text = (
         f"人口が最大なのは{largest['自治体']}、"
         f"人口密度が最大なのは{densest['自治体']}。"
-        "同じ「大きい」でも、見ている都市の姿は異なります。"
+        "同じ「大きい」でも、都市の姿は違う。"
     )
 
     if quiz_metric == "高齢化率":
@@ -2634,15 +2634,15 @@ def playful_discovery_html(
     return f"""
     <section class="play-zone">
         <div class="play-zone-head">
-            <div class="play-zone-title">まず、ひとつ気になる数字から</div>
-            <div class="play-zone-note">日替わり表示・データは本編と同じ</div>
+            <div class="play-zone-title">気になる数字から見る</div>
+            <div class="play-zone-note">日替わり / 本編と同じデータ</div>
         </div>
         <div class="play-rail">
             <article class="play-card">
                 <div class="play-card-label">今日の1区</div>
                 <div class="play-card-title">{escape(str(daily_ward))}</div>
                 <div class="play-card-copy">
-                    毎日1区だけ選び、現在値と長期変化を短く表示します。
+                    毎日1区。現在値と長期変化を短く。
                 </div>
                 <div class="play-card-facts">
                     <span class="play-fact">人口 {float(daily_row['人口']):,.0f}人</span>
@@ -2658,7 +2658,7 @@ def playful_discovery_html(
             <article class="play-card">
                 <div class="play-card-label">3秒クイズ</div>
                 <div class="play-card-title">{escape(quiz_metric)}が23区で最も高い区は？</div>
-                <div class="play-card-copy">答えを開いてから、地図で周辺との違いを確認できます。</div>
+                <div class="play-card-copy">答えのあと、地図で周辺との差を見る。</div>
                 <details>
                     <summary>答えを見る</summary>
                     <div class="play-answer">
@@ -2786,14 +2786,14 @@ st.markdown(
             <div class="hero-eyebrow">公開統計で見る23区</div>
             <h1>東京23区データダッシュボード</h1>
             <p>
-                人口・高齢化率・人口密度を、地図と比較で確認できます。
-                2015〜2026年の推移と、2025年の人口増減要因を収録しています。
+                人口・高齢化率・人口密度を、地図と比較で確認できる。
+                2015〜2026年の推移と、2025年の人口増減要因を収録。
             </p>
             <div class="hero-tags">
                 <div class="hero-tag">地図</div>
                 <div class="hero-tag">2区を比較</div>
                 <div class="hero-tag">構造分析</div>
-                <div class="hero-tag">{hero_start_year}–{hero_end_year}年を追跡</div>
+                <div class="hero-tag">{hero_start_year}–{hero_end_year}年の推移</div>
             </div>
         </div>
         <div class="hero-visual">
@@ -2857,7 +2857,7 @@ with gacha_button:
 with gacha_note:
     st.markdown(
         '<div class="gacha-caption">'
-        "選ぶ理由が決まっていないときの入口です。選ばれた区は、下の地図と各分析画面に反映されます。"
+        "迷ったときの入口。選んだ区を地図と各分析に反映。"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -2930,7 +2930,7 @@ if map_tab.open:
         with left:
             st.subheader(f"{METRICS[selected_metric]['label']}の分布")
             st.markdown(
-                '<div class="section-intro">色が濃いほど値が高くなります。区にカーソルを合わせると、複数指標を同時に確認できます。</div>',
+                '<div class="section-intro">色が濃いほど値が高くなります。区にカーソルを合わせると、複数指標を同時に確認できる。</div>',
                 unsafe_allow_html=True,
             )
             minimum = float(data[metric_column].min())

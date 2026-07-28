@@ -488,7 +488,7 @@ def render_step_one(data: pd.DataFrame) -> None:
             f'{escape(str(second["自治体"]))}</strong>は、'
             f"人口差が約{population_gap:,.0f}人ですが、"
             f"高齢化率には{aging_gap:.2f}ptの差があります。"
-            "人口だけを見ても、都市構造の違いは十分に分かりません。"
+            "人口だけでは、都市構造の違いを捉えきれない。"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -496,7 +496,7 @@ def render_step_one(data: pd.DataFrame) -> None:
     st.markdown(
         (
             '<div class="demo-script">'
-            '<div class="demo-script-label">説明するときの一言</div>'
+            '<div class="demo-script-label">話すポイント</div>'
             "同じくらいの人口規模でも、高齢化率や人口密度は異なります。"
             "そこで本アプリは、実数と23区中央値を基準にした指数を併用しています。"
             "</div>"
@@ -530,7 +530,7 @@ def render_step_two(history: pd.DataFrame) -> None:
             f"高齢化率の上昇幅が最も大きいのは"
             f'<strong>{escape(str(aging["自治体"]))}</strong>'
             f"（{float(aging['高齢化率変化']):+.2f}pt）です。"
-            "人口変化と高齢化は一つの軸だけでは整理できません。"
+            "人口変化と高齢化は、一つの軸では整理できない。"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -538,9 +538,9 @@ def render_step_two(history: pd.DataFrame) -> None:
     st.markdown(
         (
             '<div class="demo-script">'
-            '<div class="demo-script-label">説明するときの一言</div>'
+            '<div class="demo-script-label">話すポイント</div>'
             "単年度の順位だけでは見えないため、同じ期間で人口と高齢化率の変化を並べました。"
-            "散布図は因果を示すものではなく、次に調べる区を見つけるために使っています。"
+            "散布図は因果の証明ではなく、次に調べる区を探す道具。"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -567,7 +567,7 @@ def render_step_three(factors: pd.DataFrame) -> None:
             f"自然増減が{float(row['自然増減']):+,.0f}人でも、"
             f"社会増減が{float(row['社会増減']):+,.0f}人となり、"
             f"人口全体では{float(row['人口増減']):+,.0f}人です。"
-            "人口の増減は、出生・死亡だけでなく、人の移動を分けて見る必要があります。"
+            "人口の増減は、出生・死亡と人の移動に分けて見る。"
             "</div>"
         ),
         unsafe_allow_html=True,
@@ -575,7 +575,7 @@ def render_step_three(factors: pd.DataFrame) -> None:
     st.markdown(
         (
             '<div class="demo-script">'
-            '<div class="demo-script-label">説明するときの一言</div>'
+            '<div class="demo-script-label">話すポイント</div>'
             "人口が増えたという結果だけではなく、社会増減・自然増減・その他増減へ分解しました。"
             "自然増減＝出生－死亡などの整合式もコードで検証しています。"
             "</div>"
@@ -629,8 +629,8 @@ def render_step_four() -> None:
     st.markdown(
         """
         <div class="demo-script">
-            <div class="demo-script-label">説明するときの一言</div>
-            完成画面だけでなく、取得・検証・エラー修正・公開まで再現できる構成にしました。
+            <div class="demo-script-label">話すポイント</div>
+            取得、検証、エラー修正、公開まで再現できる構成。
             次は住宅、地価、年齢階級別人口を加え、人口変化の背景をさらに説明したいです。
         </div>
         """,
@@ -650,7 +650,7 @@ def render_demo_tab(
     st.markdown(
         """
         <div class="demo-head">
-            <h2 class="demo-title">3分で見る、このアプリの考え方</h2>
+            <h2 class="demo-title">3分デモ</h2>
             <p class="demo-lead">
                 画面を順番に説明するためのデモです。
                 3つの問いを通して、比較・経年変化・人口増減要因を確認し、

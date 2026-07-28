@@ -610,7 +610,7 @@ def render_population_factors_tab(
             _scatter(merged, selected_ward),
             width="stretch",
         )
-        st.caption("位置関係は因果関係を直接示すものではありません。")
+        st.caption("位置関係は因果を直接示さない。")
 
     st.divider()
 
@@ -637,7 +637,7 @@ def render_population_factors_tab(
             "- **社会増減**：他県移動増減と都内間移動増減の合計\n"
             "- **自然増減**：出生数－死亡数\n"
             "- **人口増減**：社会増減＋自然増減＋その他増減\n"
-            "- 1年間の集計であり、長期的な因果関係を断定するものではありません。"
+            "- 1年間の集計で、長期的な因果は断定しない。"
         )
 
     st.markdown(
