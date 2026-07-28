@@ -283,7 +283,7 @@ td {{ font-weight:650; }}
 </head>
 <body>
 <main>
-<small>TOKYO 23 WARDS / WARD REPORT</small>
+<small>TOKYO 23 区 / WARD REPORT</small>
 <h1>{escape(values['ward'])}</h1>
 <p class="lead">{escape(_interpretation(values))}</p>
 <table>
@@ -353,7 +353,7 @@ def render_project_tab(
     st.markdown(
         (
             '<div class="project-head">'
-            '<div class="project-label">PROJECT OVERVIEW</div>'
+            '<div class="project-label"></div>'
             '<h2 class="project-title">このプロジェクトについて</h2>'
             '<p class="project-lead">'
             "東京都の公開統計を、区ごとの比較と時系列の両方から確認するために作成しました。"
@@ -364,7 +364,7 @@ def render_project_tab(
         unsafe_allow_html=True,
     )
 
-    _section("01 / PURPOSE", "解決したかったこと")
+    _section("", "解決したかったこと")
     st.markdown(
         (
             '<div class="project-note">'
@@ -377,20 +377,20 @@ def render_project_tab(
         unsafe_allow_html=True,
     )
 
-    _section("02 / PIPELINE", "データから画面まで")
+    _section("", "データから画面まで")
     st.markdown(
         (
             '<div class="project-flow">'
-            '<div class="project-flow-item"><div class="project-flow-step">STEP 01</div>'
+            '<div class="project-flow-item"><div class="project-flow-step">1</div>'
             '<div class="project-flow-name">取得</div>'
             '<div class="project-flow-note">東京都の公開統計と行政区域GeoJSON</div></div>'
-            '<div class="project-flow-item"><div class="project-flow-step">STEP 02</div>'
+            '<div class="project-flow-item"><div class="project-flow-step">2</div>'
             '<div class="project-flow-name">整形</div>'
             '<div class="project-flow-note">自治体コードをキーにCSVを統合</div></div>'
-            '<div class="project-flow-item"><div class="project-flow-step">STEP 03</div>'
+            '<div class="project-flow-item"><div class="project-flow-step">3</div>'
             '<div class="project-flow-name">検証</div>'
             '<div class="project-flow-note">23区数、重複、欠損、増減式を確認</div></div>'
-            '<div class="project-flow-item"><div class="project-flow-step">STEP 04</div>'
+            '<div class="project-flow-item"><div class="project-flow-step">4</div>'
             '<div class="project-flow-name">可視化</div>'
             '<div class="project-flow-note">Streamlit、Altair、PyDeckで実装</div></div>'
             "</div>"
@@ -404,7 +404,7 @@ def render_project_tab(
     summary_columns[2].metric("経年レコード", f"{len(history):,}件")
     summary_columns[3].metric("分析画面", "7タブ")
 
-    _section("03 / DECISIONS", "設計上の判断")
+    _section("", "設計上の判断")
     decisions = [
         (
             "絶対値と指数を使い分ける",
@@ -435,7 +435,7 @@ def render_project_tab(
         unsafe_allow_html=True,
     )
 
-    _section("04 / ITERATION", "実装中に直したこと")
+    _section("", "実装中に直したこと")
     iteration_left, iteration_right = st.columns(2, gap="large")
     with iteration_left:
         st.markdown(
@@ -457,7 +457,7 @@ def render_project_tab(
         )
 
     st.divider()
-    _section("05 / WARD REPORT", "区別レポートを作る")
+    _section("", "区別レポートを作る")
     st.caption(
         "現在値、長期変化、2025年の人口増減要因を一枚にまとめます。"
         "HTMLはブラウザで開き、印刷からPDFとして保存できます。"

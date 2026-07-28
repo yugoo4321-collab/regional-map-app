@@ -517,7 +517,7 @@ def render_population_factors_tab(
     st.markdown(
         (
             '<div class="factor-head">'
-            '<div class="factor-kicker">TOKYO 23 WARDS / 2025</div>'
+            '<div class="factor-kicker">TOKYO 23 区 / 2025</div>'
             '<h2 class="factor-title">人口変化の内訳</h2>'
             '<p class="factor-lead">'
             f"{year}年中の人口変化を、社会増減、自然増減、その他増減に分けて見る。"
@@ -573,11 +573,11 @@ def render_population_factors_tab(
 
     left, right = st.columns([1.12, 0.88], gap="large")
     with left:
-        _section("01 / BREAKDOWN", "人口増減の要因分解")
+        _section("", "人口増減の要因分解")
         st.altair_chart(_factor_bar(selected), width="stretch")
 
     with right:
-        _section("02 / NATURAL CHANGE", "出生と死亡")
+        _section("", "出生と死亡")
         st.altair_chart(_birth_death_chart(selected), width="stretch")
 
     st.divider()
@@ -585,7 +585,7 @@ def render_population_factors_tab(
     map_column, scatter_column = st.columns([1, 1], gap="large")
     with map_column:
         _section(
-            "03 / MAP",
+            "",
             "23区の分布",
             "青は増加方向、茶は減少方向。色は評価ではなく方向と大きさを示す。",
         )
@@ -602,7 +602,7 @@ def render_population_factors_tab(
 
     with scatter_column:
         _section(
-            "04 / POSITION",
+            "",
             "社会増減と自然増減",
             "右ほど社会増、上ほど自然増。点の大きさは出生数。",
         )
@@ -614,7 +614,7 @@ def render_population_factors_tab(
 
     st.divider()
 
-    _section("05 / RANKING", "区別ランキング")
+    _section("", "区別ランキング")
     rank_metric = st.selectbox(
         "ランキング指標",
         ["人口増減", "社会増減", "自然増減", "出生数", "死亡数"],

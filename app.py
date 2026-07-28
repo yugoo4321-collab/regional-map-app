@@ -69,6 +69,11 @@ st.set_page_config(
 )
 
 st.markdown(
+    '<style>\n/* FINAL_HUMAN_UI_V1 */\n:root {\n    --final-ink: #18202a;\n    --final-muted: #66707d;\n    --final-line: #d9dee5;\n    --final-paper: #ffffff;\n    --final-bg: #f4f6f8;\n    --final-accent: #315b78;\n}\n.stApp { background: var(--final-bg) !important; }\n.block-container {\n    max-width: 1320px !important;\n    padding-top: 1.2rem !important;\n}\nh1, h2, h3 {\n    color: var(--final-ink) !important;\n    letter-spacing: -0.025em !important;\n}\n.hero, .hero-shell, .hero-panel {\n    background: var(--final-paper) !important;\n    background-image: none !important;\n    color: var(--final-ink) !important;\n    border: 1px solid var(--final-line) !important;\n    border-radius: 10px !important;\n    box-shadow: none !important;\n    min-height: auto !important;\n    padding: 1.5rem 1.6rem !important;\n}\n.hero h1, .hero-title, .hero-heading {\n    color: var(--final-ink) !important;\n    font-size: clamp(2rem, 4vw, 3rem) !important;\n    line-height: 1.12 !important;\n    max-width: 1000px !important;\n}\n.hero p, .hero-copy, .hero-description {\n    color: var(--final-muted) !important;\n    max-width: 880px !important;\n    line-height: 1.75 !important;\n}\n.hero-eyebrow, .hero-visual, .hero-network, .hero-graphic,\n.urban-signal, .signal-board, .network-board,\n.factor-kicker, .factor-section-number,\n.project-label, .project-section-no {\n    display: none !important;\n}\n.hero [class*="network"], .hero [class*="signal"] {\n    display: none !important;\n}\n.stat-card, .panel, .profile-card, .journey-card,\n.highlight-card, .discovery-card, .similar-item,\n.factor-kpi, .project-report, [data-testid="stMetric"] {\n    background: var(--final-paper) !important;\n    background-image: none !important;\n    border: 1px solid var(--final-line) !important;\n    border-radius: 8px !important;\n    box-shadow: none !important;\n}\n.journey-card, .highlight-card, .discovery-card {\n    transform: none !important;\n}\n.insight-strip, .comparison-callout, .factor-brief, .project-note {\n    background: #fbfcfd !important;\n    border: 1px solid var(--final-line) !important;\n    border-left: 3px solid var(--final-accent) !important;\n    border-radius: 4px !important;\n    box-shadow: none !important;\n}\n.type-badge, .rank-chip, .hero-chip, .hero-tag, [class*="pill"] {\n    border-radius: 4px !important;\n    background: #f2f4f6 !important;\n    border: 1px solid var(--final-line) !important;\n    color: #334155 !important;\n}\n[data-baseweb="tab-list"] {\n    gap: 0 !important;\n    border-bottom: 1px solid var(--final-line) !important;\n}\n[data-baseweb="tab"] {\n    border-radius: 0 !important;\n    font-weight: 650 !important;\n    padding-left: 0.85rem !important;\n    padding-right: 0.85rem !important;\n}\n[data-testid="stButton"] button,\n[data-testid="stDownloadButton"] button {\n    border-radius: 6px !important;\n    box-shadow: none !important;\n}\n.factor-title, .project-title {\n    font-size: clamp(1.7rem, 3vw, 2.35rem) !important;\n}\n.factor-section-title, .project-section-title {\n    margin-top: 0 !important;\n}\n[data-testid="stDataFrame"] {\n    border-radius: 6px !important;\n    box-shadow: none !important;\n}\n@media (max-width: 900px) {\n    .hero, .hero-shell, .hero-panel {\n        padding: 1.2rem !important;\n        border-radius: 8px !important;\n    }\n}\n</style>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
     """
     <style>
         /* VISUAL_SYSTEM_V3 */
@@ -1720,10 +1725,10 @@ def build_discovery_dataset(
         discovery[scaled_name] = (discovery[column] - median) / spread
         scaled_columns.append(scaled_name)
 
-    discovery["中央値からの総合距離"] = (
+    discovery["23区平均との差"] = (
         discovery[scaled_columns].pow(2).mean(axis=1).pow(0.5)
     )
-    discovery["総合距離順位"] = discovery["中央値からの総合距離"].rank(
+    discovery["総合距離順位"] = discovery["23区平均との差"].rank(
         method="min",
         ascending=False,
     ).astype(int)
@@ -1899,11 +1904,11 @@ def discovery_distance_chart(
     discovery: pd.DataFrame,
     selected_ward: str,
 ) -> alt.Chart:
-    chart_data = discovery.nlargest(10, "中央値からの総合距離").copy()
+    chart_data = discovery.nlargest(10, "23区平均との差").copy()
     if selected_ward not in chart_data["自治体"].tolist():
         selected_row = discovery.loc[discovery["自治体"] == selected_ward]
         chart_data = pd.concat([chart_data, selected_row], ignore_index=True)
-    chart_data = chart_data.sort_values("中央値からの総合距離")
+    chart_data = chart_data.sort_values("23区平均との差")
     chart_data["選択"] = chart_data["自治体"].eq(selected_ward)
 
     return (
@@ -1911,8 +1916,8 @@ def discovery_distance_chart(
         .mark_bar(cornerRadiusEnd=5, height=20)
         .encode(
             x=alt.X(
-                "中央値からの総合距離:Q",
-                title="中央値からの総合距離",
+                "23区平均との差:Q",
+                title="23区平均との差",
             ),
             y=alt.Y(
                 "自治体:N",
@@ -1926,7 +1931,7 @@ def discovery_distance_chart(
             ),
             tooltip=[
                 alt.Tooltip("自治体:N"),
-                alt.Tooltip("中央値からの総合距離:Q", format=".2f"),
+                alt.Tooltip("23区平均との差:Q", format=".2f"),
                 alt.Tooltip("総合距離順位:Q", title="23区順位"),
             ],
         )
@@ -1949,7 +1954,7 @@ st.markdown(
     f"""
     <section class="hero">
         <div class="hero-copy">
-            <div class="hero-eyebrow">TOKYO 23 WARDS DATA</div>
+            <div class="hero-eyebrow">東京23区の公開統計</div>
             <h1>東京23区 都市データダッシュボード</h1>
             <p>
                 人口・高齢化率・人口密度を、地図と比較で確認できます。
@@ -1963,7 +1968,7 @@ st.markdown(
             </div>
         </div>
         <div class="hero-visual">
-            <div class="visual-topline"><span>DATA OVERVIEW</span><span>TOKYO OPEN DATA</span></div>
+            <div class="visual-topline"><span>概要</span><span>東京都公開統計</span></div>
             <svg class="city-network" viewBox="0 0 520 280" role="img" aria-label="都市ネットワークの抽象図">
                 <path class="network-line" d="M26 201 C98 146,145 228,212 163 S345 79,491 113"/>
                 <path class="network-line" d="M47 82 C121 117,170 66,232 106 S349 215,477 180"/>
@@ -1986,9 +1991,9 @@ st.markdown(
                 <circle class="network-node" cx="477" cy="180" r="5"/>
             </svg>
             <div class="visual-metrics">
-                <div class="visual-metric"><strong>23</strong><span>WARDS</span></div>
-                <div class="visual-metric"><strong>3</strong><span>CORE METRICS</span></div>
-                <div class="visual-metric"><strong>{hero_year_count}</strong><span>YEARS TRACKED</span></div>
+                <div class="visual-metric"><strong>23</strong><span>区</span></div>
+                <div class="visual-metric"><strong>3</strong><span>指標</span></div>
+                <div class="visual-metric"><strong>{hero_year_count}</strong><span>収録年数</span></div>
             </div>
         </div>
     </section>
@@ -2057,7 +2062,7 @@ st.markdown(
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
 map_tab, compare_tab, analysis_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(
-    ["地図とプロフィール", "2区比較", "構造分析", "発見モード", "要因分析", "経年変化", "プロジェクト", "データ"],
+    ["地図とプロフィール", "2区比較", "構造分析", "特徴分析", "要因分析", "経年変化", "プロジェクト", "データ"],
     key="main_navigation",
     on_change="rerun",
 )
@@ -2244,7 +2249,7 @@ if discovery_tab.open:
         largest_aging_shift = discovery.loc[discovery["高齢化率変化"].idxmax()]
         highest_density_discovery = discovery.loc[discovery["人口密度"].idxmax()]
         most_distinctive = discovery.loc[
-            discovery["中央値からの総合距離"].idxmax()
+            discovery["23区平均との差"].idxmax()
         ]
 
         st.markdown(
@@ -2396,7 +2401,7 @@ if discovery_tab.open:
             st.markdown(
                 '<div class="section-intro">'
                 '人口・高齢化率・人口密度・人口増減率・高齢化率変化の5指標を'
-                '同じ基準にそろえ、中央値からの総合距離を表示します。'
+                '同じ基準にそろえ、23区平均との差を表示します。'
                 '</div>',
                 unsafe_allow_html=True,
             )
