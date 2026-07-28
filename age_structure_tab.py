@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import copy
+import json
+import random
 from pathlib import Path
 
 import altair as alt
 import pandas as pd
+import pydeck as pdk
 import streamlit as st
 
 
@@ -11,6 +15,11 @@ DATA_PATH = (
     Path(__file__).resolve().parent
     / "data"
     / "tokyo_age_structure_2026.csv"
+)
+GEOJSON_PATH = (
+    Path(__file__).resolve().parent
+    / "data"
+    / "tokyo_wards.geojson"
 )
 
 AGE_STYLE = """
@@ -92,6 +101,104 @@ AGE_STYLE = """
 }
 @media (max-width: 760px) {
     .age-difference-list {
+        grid-template-columns: 1fr;
+    }
+}
+/* AGE_ATLAS_V1 */
+.age-atlas-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.2rem;
+}
+.age-atlas-kicker {
+    color: #315F7B;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+.age-atlas-title {
+    color: #17263A;
+    font-size: clamp(1.45rem, 2.6vw, 2rem);
+    font-weight: 820;
+    letter-spacing: -0.035em;
+    margin-top: 0.18rem;
+}
+.age-atlas-note {
+    max-width: 640px;
+    color: #5B697B;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    text-align: right;
+}
+.age-atlas-summary {
+    padding: 0.78rem 0.9rem;
+    margin: 0.7rem 0 0.9rem;
+    border: 1px solid #D4DCE5;
+    border-left: 4px solid #315F7B;
+    border-radius: 7px;
+    background: #FFFFFF;
+    color: #3E4D60;
+    line-height: 1.7;
+}
+.age-atlas-rank-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 0.7rem 0 1rem;
+}
+.age-atlas-rank-card {
+    position: relative;
+    min-height: 112px;
+    overflow: hidden;
+    padding: 0.8rem 0.86rem;
+    border: 1px solid #D4DCE5;
+    border-radius: 8px 11px 8px 10px;
+    background: linear-gradient(145deg, #FFFFFF, #F6F8FA);
+}
+.age-atlas-rank-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0.82rem;
+    width: 34px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: #315F7B;
+}
+.age-atlas-rank-card:nth-child(2)::before {
+    background: #A55D39;
+}
+.age-atlas-rank-card:nth-child(3)::before {
+    background: #6D648D;
+}
+.age-atlas-rank {
+    color: #7A8595;
+    font-size: 0.68rem;
+    font-weight: 760;
+}
+.age-atlas-ward {
+    color: #17263A;
+    font-size: 1.06rem;
+    font-weight: 820;
+    margin-top: 0.24rem;
+}
+.age-atlas-value {
+    color: #566477;
+    font-size: 0.79rem;
+    line-height: 1.55;
+    margin-top: 0.24rem;
+}
+@media (max-width: 760px) {
+    .age-atlas-head {
+        display: block;
+    }
+    .age-atlas-note {
+        margin-top: 0.35rem;
+        text-align: left;
+    }
+    .age-atlas-rank-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -600,6 +707,284 @@ def report_markdown(
     return "\n".join(lines)
 
 
+@st.cache_data(show_spinner=False)
+def load_age_geojson() -> dict:
+    with GEOJSON_PATH.open(encoding="utf-8") as file:
+        geojson = json.load(file)
+
+    features = geojson.get("features", [])
+    if len(features) != 23:
+        raise ValueError(
+            f"行政区域が23件ではなく{len(features)}件です"
+        )
+    return geojson
+
+
+@st.cache_data(show_spinner=False)
+def age_atlas_data(age_data: pd.DataFrame) -> pd.DataFrame:
+    working = age_data.copy()
+    totals = working.groupby("自治体")["総数"].transform("sum")
+    working["構成比"] = (
+        working["総数"]
+        / totals.where(totals.ne(0))
+        * 100
+    )
+    band_average = (
+        working.groupby("年齢階級")["構成比"]
+        .transform("mean")
+    )
+    working["23区平均差"] = (
+        working["構成比"] - band_average
+    )
+    working["順位"] = (
+        working.groupby("年齢階級")["構成比"]
+        .rank(ascending=False, method="min")
+        .astype(int)
+    )
+    return working
+
+
+def selected_band_frame(
+    age_data: pd.DataFrame,
+    age_band: str,
+) -> pd.DataFrame:
+    selected = (
+        age_atlas_data(age_data)
+        .loc[lambda frame: frame["年齢階級"].eq(age_band)]
+        .sort_values(["構成比", "自治体"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    if len(selected) != 23:
+        raise ValueError(
+            f"{age_band}のデータが23区ではなく{len(selected)}区です"
+        )
+    return selected
+
+
+def _atlas_color(
+    value: float,
+    minimum: float,
+    maximum: float,
+) -> list[int]:
+    denominator = max(maximum - minimum, 1e-9)
+    ratio = min(max((value - minimum) / denominator, 0), 1)
+    start = (228, 235, 242)
+    end = (32, 90, 137)
+    return [
+        int(start[index] + (end[index] - start[index]) * ratio)
+        for index in range(3)
+    ] + [238]
+
+
+def prepare_age_atlas_geojson(
+    age_data: pd.DataFrame,
+    age_band: str,
+    selected_ward: str,
+) -> dict:
+    band = selected_band_frame(age_data, age_band)
+    lookup = band.set_index("自治体コード").to_dict("index")
+    minimum = float(band["構成比"].min())
+    maximum = float(band["構成比"].max())
+
+    prepared = copy.deepcopy(load_age_geojson())
+    for feature in prepared["features"]:
+        properties = feature.setdefault("properties", {})
+        code = str(properties.get("N03_007", "")).zfill(5)
+        row = lookup.get(code)
+
+        if row is None:
+            properties.update(
+                {
+                    "自治体": "不明",
+                    "構成比表示": "—",
+                    "平均との差表示": "—",
+                    "順位表示": "—",
+                    "fill_color": [224, 229, 235, 180],
+                    "line_color": [255, 255, 255, 220],
+                    "line_width": 1,
+                }
+            )
+            continue
+
+        ward = str(row["自治体"])
+        is_selected = ward == selected_ward
+        is_top_three = int(row["順位"]) <= 3
+
+        properties.update(
+            {
+                "自治体": ward,
+                "構成比表示": f"{float(row['構成比']):.2f}%",
+                "平均との差表示": (
+                    f"{float(row['23区平均差']):+.2f}pt"
+                ),
+                "順位表示": f"{int(row['順位'])}位",
+                "fill_color": _atlas_color(
+                    float(row["構成比"]),
+                    minimum,
+                    maximum,
+                ),
+                "line_color": (
+                    [15, 23, 42, 255]
+                    if is_selected
+                    else (
+                        [180, 83, 9, 255]
+                        if is_top_three
+                        else [255, 255, 255, 230]
+                    )
+                ),
+                "line_width": (
+                    5 if is_selected else (3 if is_top_three else 1)
+                ),
+            }
+        )
+
+    return prepared
+
+
+def age_atlas_map(
+    age_data: pd.DataFrame,
+    age_band: str,
+    selected_ward: str,
+) -> pdk.Deck:
+    layer = pdk.Layer(
+        "GeoJsonLayer",
+        data=prepare_age_atlas_geojson(
+            age_data,
+            age_band,
+            selected_ward,
+        ),
+        pickable=True,
+        stroked=True,
+        filled=True,
+        get_fill_color="properties.fill_color",
+        get_line_color="properties.line_color",
+        get_line_width="properties.line_width",
+        line_width_min_pixels=1,
+        auto_highlight=True,
+        highlight_color=[245, 158, 11, 170],
+    )
+    return pdk.Deck(
+        map_style=None,
+        initial_view_state=pdk.ViewState(
+            latitude=35.69,
+            longitude=139.745,
+            zoom=10.45,
+        ),
+        layers=[layer],
+        tooltip={
+            "html": (
+                "<div style='font-size:15px'><b>{自治体}</b></div>"
+                "<div style='margin-top:6px'>構成比: "
+                "<b>{構成比表示}</b></div>"
+                "<div>23区平均差: {平均との差表示}</div>"
+                "<div>{順位表示}</div>"
+            )
+        },
+    )
+
+
+def age_atlas_summary(
+    age_data: pd.DataFrame,
+    age_band: str,
+    selected_ward: str,
+) -> str:
+    band = selected_band_frame(age_data, age_band)
+    first = band.iloc[0]
+    last = band.iloc[-1]
+    selected = band.loc[
+        band["自治体"].eq(selected_ward)
+    ].iloc[0]
+    gap = float(first["構成比"]) - float(last["構成比"])
+
+    return (
+        f"{age_band}の割合が最も高いのは"
+        f"{first['自治体']}（{first['構成比']:.2f}%）。"
+        f"最も低い{last['自治体']}との差は{gap:.2f}pt。"
+        f"{selected_ward}は{int(selected['順位'])}位で、"
+        f"23区平均より{float(selected['23区平均差']):+.2f}pt。"
+    )
+
+
+def age_atlas_cards_html(
+    age_data: pd.DataFrame,
+    age_band: str,
+) -> str:
+    top_three = selected_band_frame(
+        age_data,
+        age_band,
+    ).head(3)
+    cards: list[str] = []
+
+    for index, row in top_three.iterrows():
+        cards.append(
+            '<article class="age-atlas-rank-card">'
+            f'<div class="age-atlas-rank">{index + 1}</div>'
+            f'<div class="age-atlas-ward">{row["自治体"]}</div>'
+            f'<div class="age-atlas-value">'
+            f'{float(row["構成比"]):.2f}% / '
+            f'平均差 {float(row["23区平均差"]):+.2f}pt'
+            "</div></article>"
+        )
+
+    return (
+        '<div class="age-atlas-rank-grid">'
+        + "".join(cards)
+        + "</div>"
+    )
+
+
+def age_heatmap_chart(
+    age_data: pd.DataFrame,
+    selected_band: str,
+) -> alt.Chart:
+    working = age_atlas_data(age_data).copy()
+    selected_order = (
+        working.loc[
+            working["年齢階級"].eq(selected_band)
+        ]
+        .sort_values("構成比", ascending=False)["自治体"]
+        .tolist()
+    )
+
+    return (
+        alt.Chart(working)
+        .mark_rect(cornerRadius=2)
+        .encode(
+            x=alt.X(
+                "年齢階級:N",
+                title=None,
+                sort=alt.SortField(
+                    field="年齢開始",
+                    order="ascending",
+                ),
+                axis=alt.Axis(labelAngle=-45),
+            ),
+            y=alt.Y(
+                "自治体:N",
+                title=None,
+                sort=selected_order,
+            ),
+            color=alt.Color(
+                "23区平均差:Q",
+                title="平均との差",
+                scale=alt.Scale(
+                    scheme="redblue",
+                    reverse=True,
+                    domainMid=0,
+                ),
+            ),
+            tooltip=[
+                alt.Tooltip("自治体:N"),
+                alt.Tooltip("年齢階級:N"),
+                alt.Tooltip("構成比:Q", format=".2f"),
+                alt.Tooltip("23区平均差:Q", format="+.2f"),
+                alt.Tooltip("順位:Q"),
+            ],
+        )
+        .properties(height=520)
+        .configure_view(strokeOpacity=0)
+        .configure(background="transparent")
+    )
 def render_age_structure_tab() -> None:
     st.markdown(AGE_STYLE, unsafe_allow_html=True)
 
@@ -763,6 +1148,165 @@ def render_age_structure_tab() -> None:
             second_ward,
         ),
         width="stretch",
+    )
+
+
+    st.divider()
+    st.markdown(
+        """
+        <div class="age-atlas-head">
+            <div>
+                <div class="age-atlas-kicker">AGE ATLAS</div>
+                <div class="age-atlas-title">年齢地図</div>
+            </div>
+            <div class="age-atlas-note">
+                5歳階級を切り替え、区人口に占める割合を見る。
+                色は人数ではなく構成比。
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    age_bands = (
+        age_data[["年齢階級", "年齢開始"]]
+        .drop_duplicates()
+        .sort_values("年齢開始")["年齢階級"]
+        .tolist()
+    )
+    default_band = age_bands[min(5, len(age_bands) - 1)]
+
+    if (
+        "age_atlas_band" not in st.session_state
+        or st.session_state["age_atlas_band"] not in age_bands
+    ):
+        st.session_state["age_atlas_band"] = default_band
+
+    current_index = age_bands.index(
+        st.session_state["age_atlas_band"]
+    )
+    button_columns = st.columns([0.16, 0.16, 0.16, 0.52])
+
+    with button_columns[0]:
+        if st.button(
+            "−5歳",
+            use_container_width=True,
+            disabled=current_index == 0,
+            key="age_atlas_previous",
+        ):
+            st.session_state["age_atlas_band"] = age_bands[
+                current_index - 1
+            ]
+            st.rerun()
+
+    with button_columns[1]:
+        if st.button(
+            "＋5歳",
+            use_container_width=True,
+            disabled=current_index == len(age_bands) - 1,
+            key="age_atlas_next",
+        ):
+            st.session_state["age_atlas_band"] = age_bands[
+                current_index + 1
+            ]
+            st.rerun()
+
+    with button_columns[2]:
+        if st.button(
+            "年代ガチャ",
+            use_container_width=True,
+            key="age_atlas_random",
+        ):
+            choices = [
+                band
+                for band in age_bands
+                if band != st.session_state["age_atlas_band"]
+            ]
+            st.session_state["age_atlas_band"] = random.choice(
+                choices
+            )
+            st.rerun()
+
+    age_band = st.select_slider(
+        "年齢階級",
+        options=age_bands,
+        key="age_atlas_band",
+    )
+
+    st.markdown(
+        (
+            '<div class="age-atlas-summary">'
+            + age_atlas_summary(
+                age_data,
+                age_band,
+                first_ward,
+            )
+            + "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        age_atlas_cards_html(
+            age_data,
+            age_band,
+        ),
+        unsafe_allow_html=True,
+    )
+
+    atlas_map_column, atlas_heatmap_column = st.columns(
+        [0.92, 1.08],
+        gap="large",
+    )
+    with atlas_map_column:
+        st.markdown(f"### {age_band}の分布")
+        st.pydeck_chart(
+            age_atlas_map(
+                age_data,
+                age_band,
+                first_ward,
+            ),
+            use_container_width=True,
+        )
+        st.caption(
+            "濃いほど構成比が高い。黒枠は見る区、茶色の枠は上位3区。"
+        )
+
+    with atlas_heatmap_column:
+        st.markdown("### 23区×年齢階級")
+        st.altair_chart(
+            age_heatmap_chart(
+                age_data,
+                age_band,
+            ),
+            width="stretch",
+        )
+        st.caption(
+            "各年齢階級の23区平均との差。"
+            "選んだ年齢階級の順位で区を並べる。"
+        )
+
+    atlas_download = selected_band_frame(
+        age_data,
+        age_band,
+    )[
+        [
+            "自治体コード",
+            "自治体",
+            "年齢階級",
+            "総数",
+            "構成比",
+            "23区平均差",
+            "順位",
+        ]
+    ]
+    st.download_button(
+        "この年代のデータを保存",
+        data=atlas_download.to_csv(
+            index=False
+        ).encode("utf-8-sig"),
+        file_name=f"tokyo23_age_atlas_{age_band}.csv",
+        mime="text/csv",
+        key="download_age_atlas",
     )
 
     download_columns = st.columns([0.28, 0.72])
