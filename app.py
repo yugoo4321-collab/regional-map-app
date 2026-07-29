@@ -1460,11 +1460,12 @@ st.markdown(
 
 # LAZY_TABS_PERFORMANCE_FIX_V1
 # SHAREABLE_SUBMISSION_LINKS_V1
-initialize_share_state(
-    data["自治体"].tolist(),
-    tab_key="main_navigation",
-    ward_key="selected_ward_main",
-)
+if "main_navigation" not in st.session_state:
+    initialize_share_state(
+        data["自治体"].tolist(),
+        tab_key="main_navigation",
+        ward_key="selected_ward_main",
+    )
 
 map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図', '区レポート', 'デモ', '2区比較', '調査', '構造', '年齢', '特徴', '要因', '推移', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
@@ -1472,16 +1473,92 @@ map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, dis
 with brief_tab:
     render_ward_brief_tab()
 
+# SIMPLE_DEMO_GUIDE_V1
+if demo_tab.open:
+    with demo_tab:
+        st.subheader("3分で見る使い方")
+        st.write(
+            "地図で全体像を確認し、区レポートで1区を深掘り、"
+            "比較・年齢・要因・推移で差の理由を確認します。"
+        )
+
+        step_1, step_2, step_3 = st.columns(3)
+
+        with step_1:
+            st.markdown("#### 1｜地図")
+            st.caption("人口・高齢化率・人口密度を切り替える")
+
+        with step_2:
+            st.markdown("#### 2｜区レポート")
+            st.caption("現在値・推移・年齢構成・近い区を見る")
+
+        with step_3:
+            st.markdown("#### 3｜比較と分析")
+            st.caption("気になる差を複数の指標から確認する")
+
+        st.info(
+            "おすすめの順番：地図 → 区レポート → 年齢 → 調査"
+        )
+
 
 sync_share_state_to_url(
     tab_key="main_navigation",
     ward_key="selected_ward_main",
 )
 
+if map_tab.open:
+    with map_tab:
+        left, right = st.columns([1.65, 0.75], gap="large")
+        with left:
+            st.subheader(f"{METRICS[selected_metric]['label']}の分布")
+            st.markdown(
+                '<div class="section-intro">色が濃いほど値が高くなります。区にカーソルを合わせると、複数指標を同時に確認できる。</div>',
+                unsafe_allow_html=True,
+            )
+            minimum = float(data[metric_column].min())
+            maximum = float(data[metric_column].max())
+            st.markdown(legend_html(selected_metric, minimum, maximum), unsafe_allow_html=True)
+            st.pydeck_chart(
+                make_map(raw_geojson, data, selected_metric, selected_ward),
+                width="stretch",
+                height=600,
+            )
+        with right:
+            if selected_ward == "23区全体":
+                representative = data.loc[data[metric_column].idxmax()]
+                st.markdown(
+                    f"""
+                    <div class="profile-card">
+                        <div class="profile-kicker">23区概要</div>
+                        <div class="profile-name">23区全体</div>
+                        <div class="type-badge">選択指標：{escape(METRICS[selected_metric]['short_label'])}</div>
+                        <div class="profile-summary">
+                            地図とランキングは同じ指標に連動します。区を選ぶと、順位・中央値差・都市タイプまで詳細表示に切り替わります。
+                        </div>
+                        <div class="profile-row"><span>選択指標の最大</span><span>{escape(str(representative['自治体']))}</span></div>
+                        <div class="profile-row"><span>最大値</span><span>{escape(format_value(selected_metric, float(representative[metric_column])))}</span></div>
+                        <div class="profile-row"><span>中央値</span><span>{escape(format_value(selected_metric, float(data[metric_column].median())))}</span></div>
+                        <div class="profile-row"><span>最小値</span><span>{escape(format_value(selected_metric, float(data[metric_column].min())))}</span></div>
+                        <div class="profile-row"><span>データ件数</span><span>23区</span></div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                selected_row = data.loc[data["自治体"] == selected_ward].iloc[0]
+                st.markdown(
+                    profile_html(selected_row, data, selected_metric),
+                    unsafe_allow_html=True,
+                )
+        st.markdown(
+            '<p class="source-note">統計値は2026年版、行政境界は2023年1月1日時点です。境界データは地理的比較のために使用しています。</p>',
+            unsafe_allow_html=True,
+        )
 
-# DEMO_RENDER_FROM_FILES_V1
-with demo_tab:
-    render_demo_tab_from_files()
+# GUIDED_DEMO_TAB_V1
+# WARD_BRIEF_TAB_V1
+    with demo_tab:
+        render_demo_tab_from_files()
 
 if compare_tab.open:
     with compare_tab:

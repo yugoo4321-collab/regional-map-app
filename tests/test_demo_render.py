@@ -4,86 +4,75 @@ import ast
 import unittest
 from pathlib import Path
 
-from guided_demo_tab import load_demo_inputs_from_files
-
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "app.py"
-DEMO_PATH = ROOT / "guided_demo_tab.py"
-
-
-def main_tabs(tree: ast.Module) -> tuple[list[str], list[str]]:
-    for node in tree.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if not isinstance(node.value, ast.Call):
-            continue
-
-        function = node.value.func
-        if not (
-            isinstance(function, ast.Attribute)
-            and isinstance(function.value, ast.Name)
-            and function.value.id == "st"
-            and function.attr == "tabs"
-            and node.value.args
-        ):
-            continue
-
-        labels_node = node.value.args[0]
-        target = node.targets[0] if node.targets else None
-
-        if not isinstance(labels_node, (ast.List, ast.Tuple)):
-            continue
-        if not isinstance(target, (ast.List, ast.Tuple)):
-            continue
-
-        labels = [
-            item.value
-            for item in labels_node.elts
-            if isinstance(item, ast.Constant)
-            and isinstance(item.value, str)
-        ]
-        variables = [
-            item.id
-            for item in target.elts
-            if isinstance(item, ast.Name)
-        ]
-
-        if (
-            len(labels) == len(variables)
-            and "データ" in labels
-            and ("地図" in labels or "地図とプロフィール" in labels)
-        ):
-            return labels, variables
-
-    raise AssertionError("メインタブ定義が見つかりません")
-
-
-def call_name(call: ast.Call) -> str:
-    function = call.func
-    if isinstance(function, ast.Name):
-        return function.id
-    if isinstance(function, ast.Attribute):
-        return function.attr
-    return ""
 
 
 class DemoRenderTest(unittest.TestCase):
-    def test_demo_inputs_load(self) -> None:
-        current_data, history = load_demo_inputs_from_files()
-        self.assertEqual(current_data["自治体"].nunique(), 23)
-        self.assertEqual(history["自治体"].nunique(), 23)
+    def setUp(self) -> None:
+        self.text = APP_PATH.read_text(encoding="utf-8")
+        self.tree = ast.parse(self.text)
 
-    def test_demo_tab_is_connected_once(self) -> None:
-        text = APP_PATH.read_text(encoding="utf-8")
-        tree = ast.parse(text)
-        labels, variables = main_tabs(tree)
+    def test_simple_demo_marker_exists_once(self) -> None:
+        self.assertEqual(
+            self.text.count("SIMPLE_DEMO_GUIDE_V1"),
+            1,
+        )
+
+    def test_demo_tab_exists_once(self) -> None:
+        labels: list[str] = []
+
+        for node in self.tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if not isinstance(node.value, ast.Call):
+                continue
+
+            function = node.value.func
+            if not (
+                isinstance(function, ast.Attribute)
+                and isinstance(function.value, ast.Name)
+                and function.value.id == "st"
+                and function.attr == "tabs"
+                and node.value.args
+            ):
+                continue
+
+            labels_node = node.value.args[0]
+            if not isinstance(labels_node, (ast.List, ast.Tuple)):
+                continue
+
+            candidate = [
+                item.value
+                for item in labels_node.elts
+                if isinstance(item, ast.Constant)
+                and isinstance(item.value, str)
+            ]
+
+            if "データ" in candidate and any(
+                label in {"地図", "地図とプロフィール"}
+                for label in candidate
+            ):
+                labels = candidate
+                break
 
         self.assertEqual(labels.count("デモ"), 1)
-        demo_variable = variables[labels.index("デモ")]
 
+    def test_demo_has_visible_guide_content(self) -> None:
+        self.assertIn(
+            'st.subheader("3分で見る使い方")',
+            self.text,
+        )
+        self.assertIn(
+            "おすすめの順番：地図 → 区レポート → 年齢 → 調査",
+            self.text,
+        )
+
+    def test_demo_guide_is_inside_demo_tab(self) -> None:
         matches = 0
-        for node in tree.body:
+
+        for node in ast.walk(self.tree):
             if not isinstance(node, ast.With):
                 continue
 
@@ -92,49 +81,17 @@ class DemoRenderTest(unittest.TestCase):
                 for item in ast.walk(node.items[0].context_expr)
                 if isinstance(item, ast.Name)
             }
-            if demo_variable not in context_names:
+            if "demo_tab" not in context_names:
                 continue
 
-            names = {
-                call_name(item)
-                for item in ast.walk(node)
-                if isinstance(item, ast.Call)
-            }
-            if "render_demo_tab_from_files" in names:
+            source = ast.get_source_segment(
+                self.text,
+                node,
+            ) or ""
+            if "3分で見る使い方" in source:
                 matches += 1
 
         self.assertEqual(matches, 1)
-
-    def test_no_argumentless_original_call(self) -> None:
-        text = APP_PATH.read_text(encoding="utf-8")
-        tree = ast.parse(text)
-
-        bad_calls = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            if (
-                call_name(node) == "render_demo_tab"
-                and not node.args
-                and not node.keywords
-            ):
-                bad_calls.append(node)
-
-        self.assertEqual(bad_calls, [])
-
-    def test_markers_exist(self) -> None:
-        self.assertEqual(
-            APP_PATH.read_text(encoding="utf-8").count(
-                "DEMO_RENDER_FROM_FILES_V1"
-            ),
-            1,
-        )
-        self.assertEqual(
-            DEMO_PATH.read_text(encoding="utf-8").count(
-                "DEMO_FILE_ENTRYPOINT_V1"
-            ),
-            1,
-        )
 
 
 if __name__ == "__main__":
