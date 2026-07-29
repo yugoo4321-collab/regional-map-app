@@ -715,3 +715,62 @@ def render_demo_tab(
                 st.session_state["demo_step"]
             ]
             st.rerun()
+# DEMO_FILE_ENTRYPOINT_V1
+@st.cache_data(show_spinner=False)
+def load_demo_inputs_from_files() -> tuple[pd.DataFrame, pd.DataFrame]:
+    root = Path(__file__).resolve().parent
+
+    current_data = pd.read_csv(
+        root / "data" / "tokyo_wards.csv",
+        dtype={"自治体コード": str},
+    )
+    history = pd.read_csv(
+        root / "data" / "tokyo_wards_history.csv",
+        dtype={"自治体コード": str},
+    )
+
+    required_current = {
+        "自治体コード",
+        "自治体",
+        "人口",
+        "高齢化率",
+        "人口密度",
+    }
+    required_history = {
+        "自治体コード",
+        "自治体",
+        "年",
+        "人口",
+        "高齢化率",
+    }
+
+    missing_current = required_current - set(current_data.columns)
+    missing_history = required_history - set(history.columns)
+
+    if missing_current:
+        raise ValueError(
+            "デモ用現在データの不足列: "
+            + ", ".join(sorted(missing_current))
+        )
+    if missing_history:
+        raise ValueError(
+            "デモ用経年データの不足列: "
+            + ", ".join(sorted(missing_history))
+        )
+
+    return current_data, history
+
+
+def render_demo_tab_from_files() -> None:
+    root = Path(__file__).resolve().parent
+    current_data, history = load_demo_inputs_from_files()
+
+    render_demo_tab(
+        current_data=current_data,
+        history=history,
+        factor_path=str(
+            root
+            / "data"
+            / "tokyo_population_factors_2025.csv"
+        ),
+    )
