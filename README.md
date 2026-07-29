@@ -1,3 +1,62 @@
+<!-- FINAL_SUBMISSION_PACKAGE_V1 -->
+# 東京23区データダッシュボード
+
+東京23区の人口、高齢化、人口密度、人口増減、年齢構成を、
+地図・比較・推移から確認する公開データダッシュボードです。
+
+**公開版：https://teeqy5f9waeoacgwccu4yc.streamlit.app**
+
+## このプロジェクトで扱う問い
+
+- 同じ「人口が多い区」でも、人口密度や年齢構成はどう違うか
+- 長期的な人口増減と、直近の社会増減・自然増減は同じ方向か
+- 似ている区はどこか、その近さはどの指標から生まれているか
+- 特定の年代は東京23区のどこに集まっているか
+
+## 主な機能
+
+- 23区の地図・ランキング・プロフィール
+- 2区比較と2〜4区の調査ボード
+- 2015〜2026年の人口・高齢化率の推移
+- 2025年の社会増減・自然増減・その他増減
+- 2026年の5歳階級別人口と人口ピラミッド
+- 年齢地図、類似度マップ、区レポート
+- CSV・Markdown形式での結果保存
+
+## 設計で重視したこと
+
+- 指標の高低を良し悪しとして扱わない
+- 元の数値と相対指標を同じ画面で確認できる
+- 類似度や相関を因果関係として説明しない
+- データの更新年と出典を明記する
+- 自動テストと公開版確認を用意する
+
+## 技術
+
+Python / Streamlit / pandas / Altair / PyDeck / GitHub Actions
+
+## ローカル実行
+
+```bash
+cd ~/Documents/regional-map-app
+source .venv/bin/activate
+python -m streamlit run app.py
+```
+
+## 品質確認
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/final_audit.py
+```
+
+詳しい提出説明は
+[SUBMISSION_BRIEF.md](SUBMISSION_BRIEF.md)、
+発表用の話し方は
+[PORTFOLIO_TALK_TRACK.md](PORTFOLIO_TALK_TRACK.md)にまとめています。
+
+---
+
 # 東京23区 都市構造ダッシュボード
 
 [![Production quality gate](https://github.com/yugoo4321-collab/regional-map-app/actions/workflows/production-quality.yml/badge.svg)](https://github.com/yugoo4321-collab/regional-map-app/actions/workflows/production-quality.yml)
