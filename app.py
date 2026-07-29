@@ -1468,6 +1468,10 @@ initialize_share_state(
 
 map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図', '区レポート', 'デモ', '2区比較', '調査', '構造', '年齢', '特徴', '要因', '推移', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
+# WARD_BRIEF_RENDER_V2
+with brief_tab:
+    render_ward_brief_tab()
+
 sync_share_state_to_url(
     tab_key="main_navigation",
     ward_key="selected_ward_main",
