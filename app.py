@@ -19,7 +19,6 @@ from data_catalog_tab import render_data_catalog
 
 from population_factors_tab import render_population_factors_tab
 from project_portfolio_tab import render_project_tab
-from guided_demo_tab import render_demo_tab_from_files
 from share_state import (
     initialize_share_state,
     sync_share_state_to_url,
@@ -1558,7 +1557,7 @@ if map_tab.open:
 # GUIDED_DEMO_TAB_V1
 # WARD_BRIEF_TAB_V1
     with demo_tab:
-        render_demo_tab_from_files()
+        pass  # legacy demo renderer disabled
 
 if compare_tab.open:
     with compare_tab:
