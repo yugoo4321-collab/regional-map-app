@@ -80,6 +80,77 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+st.markdown(
+    """<style>\n/* COMPACT_NAVIGATION_V1 */
+[data-baseweb="tab-list"] {
+    position: sticky;
+    top: 2.85rem;
+    z-index: 90;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.28rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0.42rem 0.32rem 0.46rem;
+    border: 1px solid #D7DFE7;
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 6px 18px rgba(30, 45, 62, 0.06);
+}
+[data-baseweb="tab-list"]::-webkit-scrollbar {
+    display: none;
+}
+[data-baseweb="tab"] {
+    flex: 0 0 auto;
+    min-width: max-content;
+    height: 2.55rem;
+    padding: 0 0.78rem;
+    border: 1px solid transparent;
+    border-radius: 7px 9px 7px 8px;
+    color: #596779;
+    font-size: 0.84rem;
+    font-weight: 720;
+    white-space: nowrap;
+}
+[data-baseweb="tab"]:hover {
+    border-color: #D5DEE7;
+    background: #FFFFFF;
+    color: #24364B;
+}
+[data-baseweb="tab"][aria-selected="true"] {
+    border-color: #AFC3D4;
+    background: #FFFFFF;
+    color: #183650;
+    box-shadow: 0 2px 8px rgba(34, 67, 94, 0.09);
+}
+[data-baseweb="tab-highlight"] {
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: #315F7B;
+}
+[data-baseweb="tab-border"] {
+    display: none;
+}
+@media (max-width: 760px) {
+    [data-baseweb="tab-list"] {
+        top: 2.55rem;
+        margin-left: -0.35rem;
+        margin-right: -0.35rem;
+        padding-left: 0.42rem;
+        padding-right: 0.42rem;
+        border-radius: 8px;
+    }
+    [data-baseweb="tab"] {
+        height: 2.4rem;
+        padding: 0 0.68rem;
+        font-size: 0.8rem;
+    }
+}\n</style>""",
+    unsafe_allow_html=True,
+)
+
 load_app_styles()
 
 
@@ -1395,7 +1466,7 @@ initialize_share_state(
     ward_key="selected_ward_main",
 )
 
-map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図とプロフィール', '区レポート', '3分デモ', '2区比較', '調査ボード', '構造分析', '年齢構成', '特徴分析', '要因分析', '経年変化', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
+map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, discovery_tab, factors_tab, history_tab, project_tab, data_tab = st.tabs(['地図', '区レポート', 'デモ', '2区比較', '調査', '構造', '年齢', '特徴', '要因', '推移', 'プロジェクト', 'データ'], key='main_navigation', on_change='rerun')
 
 sync_share_state_to_url(
     tab_key="main_navigation",

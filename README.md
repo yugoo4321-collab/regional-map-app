@@ -236,3 +236,11 @@ regional-map-app/
 source .venv/bin/activate
 python scripts/quality_gate.py
 ```
+
+## 画面構成
+
+<!-- COMPACT_NAVIGATION_V1 -->
+- 基本：地図、区レポート、デモ
+- 比較：2区比較、調査、構造、年齢
+- 発見：特徴、要因、推移
+- 補足：プロジェクト、データ
