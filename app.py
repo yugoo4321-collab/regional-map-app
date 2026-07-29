@@ -1472,6 +1472,7 @@ map_tab, brief_tab, demo_tab, compare_tab, board_tab, analysis_tab, age_tab, dis
 with brief_tab:
     render_ward_brief_tab()
 
+
 sync_share_state_to_url(
     tab_key="main_navigation",
     ward_key="selected_ward_main",
